@@ -10,9 +10,8 @@ class ClusteringAlg:
     def train(self, X):
         pass
 
-    @staticmethod
-    def interpret(prediction, representations):
-        for label, location in zip(representations[0], representations[1]):
+    def interpret(self, prediction):
+        for label, location in zip(self.representants[0], self.representants[1]):
             if label == prediction:
                 return location
         raise Exception("Matching label not found")
@@ -23,10 +22,9 @@ class ClusteringAlg:
     def predict(self, user):
         pass
 
-    @staticmethod
-    def suggest(status, representations):
+    def suggest(self, comparing_vector):
         # for simplicity take cluster that is furthest away
-        labels, locations = representations
-        dists = euclidean_distances(status.reshape(1, -1), locations)
+        labels, locations = self.representants
+        dists = euclidean_distances(comparing_vector.reshape(1, -1), locations)
 
         return argmax(dists)
