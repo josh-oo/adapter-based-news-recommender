@@ -1,10 +1,10 @@
-from ClusteringAlg import ClusteringAlg
+from src.clustering.algorithm_wrappers.ClusteringAlg import ClusteringAlg
 from sklearn.cluster import KMeans
 
 
 class KMeansWrapper(ClusteringAlg):
     def train(self, X):
-        model = KMeans(n_clusters=5, random_state=0, n_init="auto").fit(X)
+        model = KMeans(n_clusters=self.n_clusters, random_state=0, n_init="auto").fit(X)
         self.model = model
 
     def extract_representations(self):

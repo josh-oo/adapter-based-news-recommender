@@ -1,11 +1,18 @@
 from sklearn.metrics import euclidean_distances
 from numpy import argmax
+import configparser
+import pathlib
 
 
 class ClusteringAlg:
     def __init__(self):
         self.model = None
         self.representants = None
+
+        config = configparser.ConfigParser()
+        file_path = pathlib.Path(__file__).parent.parent.parent.parent / 'config.ini'
+        config.read(file_path)
+        self.n_clusters = int(config['Clustering']['NoClusters'])
 
     def train(self, X):
         pass
