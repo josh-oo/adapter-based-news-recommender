@@ -23,6 +23,7 @@ class ClusteringAlg:
         file_path = pathlib.Path(__file__).parent.parent.parent.parent / 'config.ini'
         config.read(file_path)
         self.n_clusters = int(config['Clustering']['NoClusters'])
+        self.config = config
 
     def train(self, data):
         """
@@ -49,6 +50,7 @@ class ClusteringAlg:
         Calculates the representats for each cluster using the model stored at self.model.
         This can occur in several ways, the simplest being the mean / cluster center.
         NEEDS TO BE IMPLEMENTED IN CHILD CLASS
+        TODO: give different methods
         :return: List of representants
         """
         pass
@@ -71,15 +73,15 @@ class ClusteringAlg:
         # for simplicity for now take cluster that is furthest away
         labels, locations = self.representants
         dists = euclidean_distances(comparing_vector.reshape(1, -1), locations)
-
         return argmax(dists), locations[argmax(dists)]
 
     def visualize(self, data, labels, user, representant):
+        #TODO: plot colour also
         fig = plt.figure()
         n_components = len(data[0])
         if n_components == 2:
             ax = fig.add_subplot(111)
-            for cluster in range(self.n_clusters):
+            for cluster in range(max(labels)):
                 cluster_data = data[labels == cluster]
                 ax.scatter(cluster_data[:, 0], cluster_data[:, 1], s=1, alpha=0.5)
             if user is not None:
@@ -90,7 +92,7 @@ class ClusteringAlg:
                 ax.legend()
         if n_components == 3:
             ax = fig.add_subplot(111, projection='3d')
-            for cluster in range(self.n_clusters):
+            for cluster in range(max(labels)):
                 cluster_data = data[labels == cluster]
                 ax.scatter(cluster_data[:, 0], cluster_data[:, 1], cluster_data[:,2], s=1, alpha=0.5)
             if user is not None:
