@@ -1,5 +1,5 @@
+![header.png](header.png)
 # 04 Continous User Feedback
-![img.png](img.png)
 ## Clustering
 ### Environment
 The file 'clustering_requirements.txt' may be used to create an environment using:
