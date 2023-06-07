@@ -18,7 +18,7 @@ add_selectbox = st.sidebar.selectbox(
     'Choose a clustering algorithm:',
     ('KMeans', 'Agglomerative Clustering', 'OPTICS')
 )
-number = st.sidebar.slider("Choose distance of suggestion to user:", 0, 100)
+number = st.sidebar.slider("Choose distance of suggestion to user:", 1, 100)
 left_column, right_column = st.columns(2)
 
 ### DATA LOADING ###
