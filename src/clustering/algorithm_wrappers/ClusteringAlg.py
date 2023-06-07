@@ -1,9 +1,11 @@
-from matplotlib import pyplot as plt
 from sklearn.metrics import euclidean_distances
 from numpy import argmax
 import configparser
 import pathlib
 import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
 
 class ClusteringAlg:
     """
@@ -45,7 +47,7 @@ class ClusteringAlg:
                 return location
         raise Exception("Matching label not found")
 
-    def extract_representations(self, X, mode='centroid'):
+    def extract_representations(self, X=None, mode='medoid'):
         """
         Calculates the representats for each cluster using the model stored at self.model.
         This can occur in two ways:
@@ -112,39 +114,54 @@ class ClusteringAlg:
             except ValueError: # checks if float
                 print("Not a valid suggestion metric. Pass value 'max' or percentage in between 0 and 1")
 
-    def visualize(self, data, labels, user, representant):
+    def visualize(self, data, labels, user, representant) -> go:
         #TODO: plot colour also
-        fig = plt.figure()
         n_components = len(data[0])
+        fig = go.Figure()
         if n_components == 2:
-            ax = fig.add_subplot(111)
-            for cluster in range(max(labels)):
-                cluster_data = data[labels == cluster]
-                result = ax.scatter(cluster_data[:, 0], cluster_data[:, 1], s=1, alpha=0.1)
-                c = result.get_facecolor()[0]
-                repr = self.representants[1][cluster]
-                ax.scatter(repr[0], repr[1], s=5, color=c)
+            df = pd.DataFrame({'Cluster': labels, 'x': data[:, 0], 'y': data[:, 1]})
+            fig.add_trace(go.Scatter(df, x="x", y="y", mode='markers', color='Cluster', opacity=0.4))
+            # if user is not None:
+            #     ax.scatter(user[0], user[1], c='red', s=10, label="User")
+            #     ax.legend()
+            # if representant is not None:
+            #     ax.scatter(representant[0], representant[1], color='black', s=10, label="Suggestion")
+            #     ax.legend()
+        elif n_components == 3:
+            fig.add_trace(go.Scatter3d(x=data[:,0], y=data[:,1], z=data[:,2],
+                                       mode='markers',
+                                       marker=dict(
+                                           size=1),
+                                       marker_color=labels, opacity=0.2, name="Users"))
+            repr = self.representants[1]
+            print(repr)
+            fig.add_trace(go.Scatter3d(x=repr[:,0], y=repr[:,1], z=repr[:,2],
+                                       mode='markers',
+                                       marker=dict(
+                                           size=2),
+                                       marker_color=list(range(len(repr))), name="Exemplars"))
+
             if user is not None:
-                ax.scatter(user[0], user[1], c='red', s=10, label="User")
-                ax.legend()
+                fig.add_trace(
+                    go.Scatter3d(x=[user[0]], y=[user[1]], z=[user[2]],
+                                 marker_symbol=['diamond'],
+                                 marker=dict(
+                                     size=5),
+                                 mode='markers', name="User")
+                                 # marker_color=[self.predict(user)]) # todo
+                )
             if representant is not None:
-                ax.scatter(representant[0], representant[1], color='black', s=10, label="Suggestion")
-                ax.legend()
-        if n_components == 3:
-            ax = fig.add_subplot(111, projection='3d')
-            for cluster in range(max(labels)):
-                cluster_data = data[labels == cluster]
-                result = ax.scatter(cluster_data[:, 0], cluster_data[:, 1], cluster_data[:,2], s=1, alpha=0.2)
-                c = result.get_facecolor()[0]
-                repr = self.representants[1][cluster]
-                ax.scatter(repr[0], repr[1], repr[2], s=5, color=c, alpha=1)
-            if user is not None:
-                ax.scatter(user[0], user[1], user[2], c='red', s=10, label="User")
-                ax.legend()
-            if representant is not None:
-                ax.scatter(representant[0], representant[1], representant[2], c='black', s=10, label="Representant")
-                ax.legend()
-        # plt.title(title, fontsize=18)
+                fig.add_trace(
+                    go.Scatter3d(x=[representant[0]], y=[representant[1]], z=[representant[2]],
+                                 marker_symbol=['diamond'],
+                                 marker=dict(
+                                     size=5),
+                                 mode='markers', name="Suggestion")
+                                 # marker_color=[self.predict(user)])) #todo
+                )
+        else:
+            raise ValueError
+        self.figure = fig
 
         def measure_performance(self, metric='chi'):
             """

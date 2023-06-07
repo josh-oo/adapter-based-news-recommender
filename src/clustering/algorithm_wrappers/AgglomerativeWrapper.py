@@ -9,20 +9,20 @@ class AgglomorativeWrapper(ClusteringAlg):
     def centroids(self, X):
         labels = AgglomerativeClustering(n_clusters = self.n_clusters).fit_predict(X)
         self.labels = labels
-        centers = []
+        centers = np.zeros(shape=(self.n_clusters, len(X[0]))) # no clusters, and dimensionality
         for label in range(self.n_clusters):
-            centers.append(np.mean(X[labels == label], axis=0))
+            centers[label] = np.mean(X[labels == label], axis=0)
         return list(range(self.n_clusters)), centers
 
     def medoids(self, X):
         labels = AgglomerativeClustering(n_clusters = self.n_clusters).fit_predict(X)
         self.labels = labels
-        repr = []
+        centers = np.zeros(shape=(self.n_clusters, len(X[0])))
         for label in range(self.n_clusters):
             centroid = np.mean(X[labels == label], axis=0)
             dists = euclidean_distances(centroid.reshape(1, -1), X[labels == label])
-            repr.append(X[self.labels == label][np.argmin(dists[0])])
-        return list(range(self.n_clusters)), repr
+            centers[label] = X[self.labels == label][np.argmin(dists[0])]
+        return list(range(self.n_clusters)), centers
 
     def predict(self, user):
         labels, locations = self.representants

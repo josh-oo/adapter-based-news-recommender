@@ -19,14 +19,14 @@ class KMeansWrapper(ClusteringAlg):
 
     def medoids(self, X):
         centers = self.model.cluster_centers_
-        repr = []
+        repr = np.zeros(shape=(self.n_clusters, len(X[0])))
         for label, center in enumerate(centers):
             dists = euclidean_distances(center.reshape(1, -1), X[self.labels == label])
-            repr.append(X[self.labels == label][np.argmin(dists[0])])
+            repr[label] = X[self.labels == label][np.argmin(dists[0])]
         return list(range(self.n_clusters)), repr
 
     def predict(self, user):
-        return self.model.predict(user[np.newaxis, ...])
+        return self.model.predict(user[np.newaxis, ...])[0]
 
     def visualize(self, data, user=None, representant=None):
         labels = self.model.labels_
