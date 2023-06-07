@@ -6,21 +6,21 @@ from sklearn.metrics import euclidean_distances
 
 class AgglomorativeWrapper(ClusteringAlg):
 
-    def centroids(self, X):
-        labels = AgglomerativeClustering(n_clusters = self.n_clusters).fit_predict(X)
+    def train(self, data):
+        labels = AgglomerativeClustering(n_clusters = self.n_clusters).fit_predict(data)
         self.labels = labels
+
+    def centroids(self, X):
         centers = np.zeros(shape=(self.n_clusters, len(X[0]))) # no clusters, and dimensionality
         for label in range(self.n_clusters):
-            centers[label] = np.mean(X[labels == label], axis=0)
+            centers[label] = np.mean(X[self.labels == label], axis=0)
         return list(range(self.n_clusters)), centers
 
     def medoids(self, X):
-        labels = AgglomerativeClustering(n_clusters = self.n_clusters).fit_predict(X)
-        self.labels = labels
         centers = np.zeros(shape=(self.n_clusters, len(X[0])))
         for label in range(self.n_clusters):
-            centroid = np.mean(X[labels == label], axis=0)
-            dists = euclidean_distances(centroid.reshape(1, -1), X[labels == label])
+            centroid = np.mean(X[self.labels == label], axis=0)
+            dists = euclidean_distances(centroid.reshape(1, -1), X[self.labels == label])
             centers[label] = X[self.labels == label][np.argmin(dists[0])]
         return list(range(self.n_clusters)), centers
 

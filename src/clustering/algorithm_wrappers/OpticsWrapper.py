@@ -6,14 +6,16 @@ from sklearn.cluster import OPTICS
 import numpy as np
 
 class OpticsWrapper(ClusteringAlg):
-    def centroids(self, X):
+    def train(self, data):
         min_sample = int(self.config['Clustering.Optics']['min_samples'])
         labels = OPTICS(min_samples=min_sample).fit_predict(X)
         self.labels = labels
-        centers = np.zeros(shape=(max(labels), len(X[0]))) # no clusters, and dimensionality
-        for label in range(max(labels)):
-            centers[label] = np.mean(X[labels == label], axis=0)
-        return list(range(max(labels))), centers
+
+    def centroids(self, X):
+        centers = np.zeros(shape=(max(self.labels), len(X[0]))) # no clusters, and dimensionality
+        for label in range(max(self.labels)):
+            centers[label] = np.mean(X[self.labels == label], axis=0)
+        return list(range(max(self.labels))), centers
 
     def medoids(self, X):
         min_sample = int(self.config['Clustering.Optics']['min_samples'])
