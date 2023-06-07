@@ -18,7 +18,7 @@ add_selectbox = st.sidebar.selectbox(
     'Choose a clustering algorithm:',
     ('KMeans', 'Agglomerative Clustering', 'OPTICS')
 )
-
+number = st.sidebar.slider("Choose distance of suggestion to user:", 0, 100)
 left_column, right_column = st.columns(2)
 
 ### DATA LOADING ###
@@ -69,9 +69,10 @@ else:
 model.train(user_red)
 model.extract_representations(user_red)  # return tuple (clusterid, location)
 prediction = model.predict(user_test_red[0])
-right_column.markdown(f"**Your cluster**: {prediction}")
 cluster_representant = model.interpret(prediction)
-user_suggestion = model.suggest(cluster_representant)
+user_suggestion = model.suggest(cluster_representant, metric=number)
+
+right_column.markdown(f"**Your cluster**: {prediction}")
 right_column.markdown(f"Would you like to see a user from **Cluster {user_suggestion[0]}**?")
 model.visualize(user_red, user_test_red[0], user_suggestion[1])
 right_column.plotly_chart(model.figure)

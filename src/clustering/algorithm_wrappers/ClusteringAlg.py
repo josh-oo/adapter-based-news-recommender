@@ -106,13 +106,13 @@ class ClusteringAlg:
             return distsance_ind[-1], locations[distsance_ind[-1]]
         else:
             try:
-                percentage = float(metric)
-                if not 0 < percentage <= 1: # check if in range
+                percentage = int(metric)
+                if not 0 < percentage <= 100: # check if in range
                     raise ValueError
-                index = int(len(distsance_ind) * percentage)
+                index = int(len(distsance_ind) * percentage/100) - 1
                 return distsance_ind[index], locations[distsance_ind[index]]
             except ValueError: # checks if float
-                print("Not a valid suggestion metric. Pass value 'max' or percentage in between 0 and 1")
+                print("Not a valid suggestion metric. Pass value 'max' or percentage in between 1 and 100")
 
     def visualize(self, data, labels, user, representant) -> go:
         #TODO: plot colour also
@@ -134,7 +134,6 @@ class ClusteringAlg:
                                            size=1),
                                        marker_color=labels, opacity=0.2, name="Users"))
             repr = self.representants[1]
-            print(repr)
             fig.add_trace(go.Scatter3d(x=repr[:,0], y=repr[:,1], z=repr[:,2],
                                        mode='markers',
                                        marker=dict(

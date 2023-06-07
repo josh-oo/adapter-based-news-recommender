@@ -20,7 +20,6 @@ class OpticsWrapper(ClusteringAlg):
         labels = OPTICS(min_samples=min_sample).fit_predict(X)
         self.labels = labels
         centers = np.zeros(shape=(max(labels), len(X[0])))
-        print(centers)
         for label in range(max(labels)):
             centroid = np.mean(X[labels == label], axis=0)
             dists = euclidean_distances(centroid.reshape(1, -1), X[labels == label])
