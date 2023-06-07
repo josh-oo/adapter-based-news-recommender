@@ -51,8 +51,25 @@ def umap_transform(train_data, test_data):
 
 user_red, user_test_red = umap_transform(user_embedding, test_embedding)
 
-# TODO start newsfeed
+### 1. NEWS RECOMMENDATIONS ###
 left_column.header('Newsfeed')
+
+@st.cache_data
+def get_articles_for_user():
+    # TODO place recommender system here
+    headline_path = config['DATA']['HeadlinePath']
+    import pandas as pd
+    headlines = pd.read_csv(headline_path, header=None, sep ='\t')
+    return headlines.loc[:20,3]
+
+article_recommendations = get_articles_for_user()
+
+article_fields = [left_column.button(article, use_container_width=True) for article in article_recommendations]
+
+for i, button in enumerate(article_fields):
+    if button:
+        # todo send info back
+        print(article_recommendations[i])
 
 ### 2. CLUSTERING ####
 right_column.header('Clustering')
