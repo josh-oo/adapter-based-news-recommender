@@ -50,7 +50,6 @@ def umap_transform(train_data, test_data):
     return user_reduced, test_reduced
 
 user_red, user_test_red = umap_transform(user_embedding, test_embedding)
-
 ### 1. NEWS RECOMMENDATIONS ###
 left_column.header('Newsfeed')
 
@@ -83,13 +82,14 @@ elif add_selectbox == 'OPTICS':
 else:
     raise ValueError
 
+test_user = user_test_red[2]
 model.train(user_red)
 model.extract_representations(user_red)  # return tuple (clusterid, location)
-prediction = model.predict(user_test_red[0])
+prediction = model.predict(test_user)
 cluster_representant = model.interpret(prediction)
 user_suggestion = model.suggest(cluster_representant, metric=number)
 
 right_column.markdown(f"**Your cluster**: {prediction}")
 right_column.markdown(f"Would you like to see a user from **Cluster {user_suggestion[0]}**?")
-model.visualize(user_red, user_test_red[0], user_suggestion[1])
+model.visualize(user_red, test_user, user_suggestion[1])
 right_column.plotly_chart(model.figure)
