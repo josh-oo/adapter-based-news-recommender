@@ -1,6 +1,7 @@
 import configparser
 
 import streamlit as st
+from wordcloud import WordCloud
 
 from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
@@ -11,6 +12,8 @@ from src.utils import fit_standardizer, standardize_data, load_data
 
 st.set_page_config(
     page_title="badpun - Newsfeed",
+    layout="wide"
+
 )
 
 #### SIDEBAR ######
@@ -42,7 +45,11 @@ reducer = fit_reducer(config['UMAP'], user_embedding)
 user_red = umap_transform(reducer, user_embedding)
 user_test_red = umap_transform(reducer, test_embedding)
 
+if 'user' not in st.session_state:
+    st.session_state['user'] = []
 
+# todo remove
+st.session_state.user = user_test_red[3]
 
 ### 1. NEWS RECOMMENDATIONS ###
 left_column.header('Newsfeed')
@@ -77,24 +84,23 @@ elif add_selectbox == 'OPTICS':
 else:
     raise ValueError
 
-test_user = user_test_red[2]
 model.train(user_red)
 model.extract_representations(user_red)  # return tuple (clusterid, location)
-prediction = model.predict(test_user)
+prediction = model.predict(st.session_state.user)
 cluster_representant = model.interpret(prediction)
 user_suggestion = model.suggest(cluster_representant, metric=number)
 
 right_column.markdown(f"**Your cluster**: {prediction}")
 right_column.markdown(f"Would you like to see a user from **Cluster {user_suggestion[0]}**?")
-model.visualize(user_red, test_user, user_suggestion[1])
+model.visualize(user_red, st.session_state.user, user_suggestion[1])
 right_column.plotly_chart(model.figure)
 
 
-# Create and generate a word cloud image:
+### 2.2. INTERPRETING ###
 wordcloud = WordCloud().generate_from_frequencies(user)
 
 # Display the generated image:
-column.imshow(wordcloud, interpolation='bilinear')
-column.axis("off")
-column.show()
+right_column.imshow(wordcloud, interpolation='bilinear')
+right_column.axis("off")
+right_column.show()
 st.pyplot()
