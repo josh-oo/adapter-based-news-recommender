@@ -1,4 +1,4 @@
-![header.png](header.png)
+![header.png](media/header.png)
 # 04 Continous User Feedback
 ## Clustering
 ### Environment
