@@ -1,14 +1,13 @@
 import configparser
-
 import streamlit as st
-from wordcloud import WordCloud
-
+import numpy as np
 from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
+from src.clustering.algorithm_wrappers.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
 
-from src.utils import fit_standardizer, standardize_data, load_data
+from src.utils import fit_standardizer, standardize_data, load_data, load_headlines
 
 st.set_page_config(
     page_title="badpun - Newsfeed",
@@ -32,7 +31,7 @@ config.read('config.ini')
 embedding_path = config['DATA']['UserEmbeddingPath']
 test_path = config['DATA']['TestUserEmbeddingPath']
 
-user_embedding = load_data(embedding_path)
+user_embedding = load_data(embedding_path)  # todo get_historic_user_embeddings
 test_embedding = load_data(test_path)
 
 # standardize data
@@ -48,29 +47,31 @@ user_test_red = umap_transform(reducer, test_embedding)
 if 'user' not in st.session_state:
     st.session_state['user'] = []
 
+if 'article_mask' not in st.session_state:
+    st.session_state['article_mask'] = np.array([True]*(int(config['DATA']['NoHeadlines'])+1)) # +1 because indexing in pandas is apparently different
+
 # todo remove
 st.session_state.user = user_test_red[3]
 
 ### 1. NEWS RECOMMENDATIONS ###
 left_column.header('Newsfeed')
+click_predictor = ClickPredictor("test")
+ranking_module = RankingModule(click_predictor)
 
-@st.cache_data
-def get_articles_for_user():
-    # TODO place recommender system here
-    headline_path = config['DATA']['HeadlinePath']
-    import pandas as pd
-    headlines = pd.read_csv(headline_path, header=None, sep ='\t')
-    return headlines.loc[:20,3]
+headlines = load_headlines(config['DATA'])
+article_recommendations = ranking_module.rank_headlines(np.nonzero(st.session_state.article_mask)[0], list(headlines[st.session_state.article_mask]))
 
-article_recommendations = get_articles_for_user()
+article_fields = [left_column.button(article, use_container_width=True) for index, article
+                  in zip(article_recommendations[0], article_recommendations[1])] # wtf python
 
-article_fields = [left_column.button(article, use_container_width=True) for article in article_recommendations]
-
-for i, button in enumerate(article_fields):
+for index, article, button in zip(article_recommendations[0], article_recommendations[1], article_fields):
     if button:
-        # todo send info back
-        print(article_recommendations[i])
-        del button
+        # todo negative clicks
+        st.session_state.article_mask[index] = False
+        click_predictor.update_step(article, 1)
+        # todo replace
+        # st.session_state.user = click_predictor.get_personal_user_embedding()
+        st.session_state.user = user_test_red[index]
 
 ### 2. CLUSTERING ####
 right_column.header('Clustering')
@@ -95,12 +96,11 @@ right_column.markdown(f"Would you like to see a user from **Cluster {user_sugges
 model.visualize(user_red, st.session_state.user, user_suggestion[1])
 right_column.plotly_chart(model.figure)
 
-
-### 2.2. INTERPRETING ###
-wordcloud = WordCloud().generate_from_frequencies(user)
-
-# Display the generated image:
-right_column.imshow(wordcloud, interpolation='bilinear')
-right_column.axis("off")
-right_column.show()
-st.pyplot()
+# ### 2.2. INTERPRETING ###
+# wordcloud = WordCloud().generate_from_frequencies(user)
+#
+# # Display the generated image:
+# right_column.imshow(wordcloud, interpolation='bilinear')
+# right_column.axis("off")
+# right_column.show()
+# st.pyplot()
