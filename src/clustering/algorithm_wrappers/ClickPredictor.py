@@ -1,4 +1,4 @@
-from .custom_model import BertForSequenceClassificationAdapters, BertConfigAdapters
+from .CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
 from transformers import AutoTokenizer
 from typing import List
 import torch
@@ -43,11 +43,11 @@ class ClickPredictor():
     if self.device is not None:
       inputs = inputs.to(device)
       user_index = user_index.to(device)
-    model_outputs = self.model(**inputs, users=user_index.unsqueeze(dim=-1))
+    model_outputs = self.model(**inputs, users=user_index.unsqueeze(dim=0))
     #TODO process model_outputs
     #dummy results:
     scores = [0.9, 0.3, 0.8]
-    word_deviations [
+    word_deviations = [
         {'Hello' : 0.1, 'World' : 0.0},
         {'The' : 0.1, 'quick' : 0.0, 'brown' : 0.3, 'fox' : 0.2},
         {'Lorem' : 0.1, 'ipsum' : 0.0, 'dolor' : 0.3, 'sit' : 0.2, 'amet': 0.0},

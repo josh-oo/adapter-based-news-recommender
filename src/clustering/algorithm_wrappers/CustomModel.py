@@ -127,12 +127,9 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
         adapter_values = self.user_projection(user_embeds)
         adapter_values = adapter_values + self.adapter_bias
 
-        print(users.shape)
-        print(adapter_values.shape)
-
         unpooled_output = self.adapter_layer(
             unpooled_output,
-            attention_mask,
+            self.bert.get_extended_attention_mask(attention_mask, input_ids.size()),
             output_attentions=output_attentions,
             user_embeds=adapter_values,
         )
@@ -185,15 +182,16 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
 
+
+            negative_indices = torch.arange(0, labels.shape[0] - torch.sum(labels), device=labels.device)
+            positive_indices = torch.arange(0, torch.sum(labels), device=labels.device) + negative_indices.shape[0]
+
+            normalized_embeddings = torch.nn.functional.normalize(adapter_values.squeeze(dim=1), p=2, dim=-1)
+
+            contrastive_loss = self.calculate_contrastive_loss(positive_indices, negative_indices, normalized_embeddings)
+            loss += contrastive_loss
+
         logits = logits.unsqueeze(dim=0)
-
-        negative_indices = torch.arange(0, labels.shape[0] - torch.sum(labels), device=labels.device)
-        positive_indices = torch.arange(0, torch.sum(labels), device=labels.device) + negative_indices.shape[0]
-
-        normalized_embeddings = torch.nn.functional.normalize(adapter_values.squeeze(dim=1), p=2, dim=-1)
-
-        contrastive_loss = self.calculate_contrastive_loss(positive_indices, negative_indices, normalized_embeddings)
-        loss += contrastive_loss
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -416,7 +414,6 @@ class BertSelfAttentionAdapters(BertSelfAttention):
 
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         if attention_mask is not None:
-            # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
