@@ -128,8 +128,8 @@ class RankingModule():
     similarity_threshold = 0.5
 
     selected_headlines = []
-    while len(selected_headlines) < k_best:
-      candidate, id, score = headlines_ids_sorted[0]
+    while len(selected_headlines) < k_best and len(headlines_ids_sorted) > 0:
+      candidate, id, score = headlines_ids_sorted.pop(0)
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
@@ -141,13 +141,13 @@ class RankingModule():
 
       if similar_headline_already_selected == False:
         selected_headlines.append((candidate, id, score))
-      headlines_ids_sorted.pop(0)
 
     #reverse headlines for low ranked articles
     headlines_ids_sorted = reversed(headlines_ids_sorted)
 
-    while len(selected_headlines) < k_exploration:
-      candidate, id, score = headlines_ids_sorted[0]
+    #fill the remaining space with exploration headlines
+    while len(selected_headlines) < take_top_k and len(headlines_ids_sorted) > 0:
+      candidate, id, score = headlines_ids_sorted.pop(0)
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
@@ -159,6 +159,5 @@ class RankingModule():
 
       if similar_headline_already_selected == False:
         selected_headlines.append((candidate, id, score))
-      headlines_ids_sorted.pop(0)
 
     return selected_headlines
