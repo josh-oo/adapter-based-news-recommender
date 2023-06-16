@@ -3,11 +3,13 @@ from transformers import AutoTokenizer
 from typing import List
 import torch
 from rouge_score import rouge_scorer #pip install rouge-score
+from huggingface_hub import hf_hub_download
+import json
 
 class ClickPredictor():
   def __init__(self, huggingface_url : str, commit_hash : str = None, device : str = None):
     """
-    load model from remote if not already present on disk
+    load model from remote if not already present on disk. once the data is downloaded it is cached on your disk
     :param
       huggingface_url (str) : url pointing to the huggingface repository for example "josh-oo/news-classifier"
       commit_has (str) : the corresponding hash if you want to use a certain version for example "748fad327878bbfbba33b55059259bbbb28046ad"
@@ -16,7 +18,13 @@ class ClickPredictor():
     config = BertConfigAdapters.from_pretrained(huggingface_url, revision=commit_hash)
     self.model = BertForSequenceClassificationAdapters.from_pretrained(huggingface_url, revision=commit_hash)
     self.tokenizer = AutoTokenizer.from_pretrained(huggingface_url, revision=commit_hash)
-    self.user_mapping = {} #TODO load user mapping
+    
+    #load user mapping
+    self.user_mapping = {}
+    #user_mapping_file = hf_hub_download(repo_id=huggingface_url, filename="user_mapping.json", revision=commit_hash)
+    #with open(user_mapping_file) as f:
+    #    self.user_mapping = json.load(f)
+        
     self.device = device
     if self.device is not None:
       self.model.to(device)
@@ -91,7 +99,7 @@ class RankingModule():
       the clickpredictor used to rank the headlines
     """
     self.click_predictor = click_predictor
-    self.similarity_scorer = ouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    self.similarity_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
   def rank_headlines(self, headlines : List[str], user_id : str = "CUSTOM", take_top_k : int = 10, exploration_ratio : float = 0.2):
     """
