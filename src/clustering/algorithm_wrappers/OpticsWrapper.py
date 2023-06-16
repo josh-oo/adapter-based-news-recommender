@@ -8,7 +8,7 @@ import numpy as np
 class OpticsWrapper(ClusteringAlg):
     def train(self, data):
         min_sample = int(self.config['Clustering.Optics']['min_samples'])
-        labels = OPTICS(min_samples=min_sample).fit_predict(X)
+        labels = OPTICS(min_samples=min_sample).fit_predict(data)
         self.labels = labels
 
     def centroids(self, X):
