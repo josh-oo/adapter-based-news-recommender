@@ -28,9 +28,9 @@ class KMeansWrapper(ClusteringAlg):
     def predict(self, user):
         return self.model.predict(user[np.newaxis, ...])[0]
 
-    def visualize(self, data, user=None, representant=None):
+    def visualize(self, data, points):
         labels = self.model.labels_
-        super().visualize(data, labels, user, representant)
+        super().visualize(data, labels, points)
 
     def measure_performance(self, X, metric='chi'):
         if metric == 'chi':

@@ -114,7 +114,7 @@ class ClusteringAlg:
             except ValueError: # checks if float
                 print("Not a valid suggestion metric. Pass value 'max' or percentage in between 1 and 100")
 
-    def visualize(self, data, labels, user, representant) -> go:
+    def visualize(self, data, labels, points=None) -> go:
         #TODO: plot colour also
         n_components = len(data[0])
         fig = go.Figure()
@@ -132,7 +132,8 @@ class ClusteringAlg:
                                        mode='markers',
                                        marker=dict(
                                            size=1),
-                                       marker_color=labels, opacity=0.2, name="Users"))
+                                       text=labels,
+                                       marker_color=labels, opacity=0.5, name="Users"))
             repr = self.representants[1]
             fig.add_trace(go.Scatter3d(x=repr[:,0], y=repr[:,1], z=repr[:,2],
                                        mode='markers',
@@ -140,24 +141,34 @@ class ClusteringAlg:
                                            size=2),
                                        marker_color=list(range(len(repr))), name="Exemplars"))
 
-            if user is not None:
+            for (label, point) in points:
                 fig.add_trace(
-                    go.Scatter3d(x=[user[0]], y=[user[1]], z=[user[2]],
+                    go.Scatter3d(x=[point[0]], y=[point[1]], z=[point[2]],
                                  marker_symbol=['diamond'],
                                  marker=dict(
                                      size=5),
-                                 mode='markers', name="User")
+                                 mode='markers', name=label)
                                  # marker_color=[self.predict(user)]) # todo
                 )
-            if representant is not None:
-                fig.add_trace(
-                    go.Scatter3d(x=[representant[0]], y=[representant[1]], z=[representant[2]],
-                                 marker_symbol=['diamond'],
-                                 marker=dict(
-                                     size=5),
-                                 mode='markers', name="Suggestion")
-                                 # marker_color=[self.predict(user)])) #todo
-                )
+
+            # if user is not None:
+            #     fig.add_trace(
+            #         go.Scatter3d(x=[user[0]], y=[user[1]], z=[user[2]],
+            #                      marker_symbol=['diamond'],
+            #                      marker=dict(
+            #                          size=5),
+            #                      mode='markers', name="User")
+            #                      # marker_color=[self.predict(user)]) # todo
+            #     )
+            # if representant is not None:
+            #     fig.add_trace(
+            #         go.Scatter3d(x=[representant[0]], y=[representant[1]], z=[representant[2]],
+            #                      marker_symbol=['diamond'],
+            #                      marker=dict(
+            #                          size=5),
+            #                      mode='markers', name="Suggestion")
+            #                      # marker_color=[self.predict(user)])) #todo
+            #     )
         else:
             raise ValueError
         self.figure = fig

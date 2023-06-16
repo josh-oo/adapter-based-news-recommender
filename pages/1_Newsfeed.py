@@ -12,16 +12,17 @@ from src.utils import fit_standardizer, standardize_data, load_data, load_headli
 st.set_page_config(
     page_title="badpun - Newsfeed",
     layout="wide"
-
 )
 
+l_small, l_right = st.columns([1, 2])
+l_small.image('media/logo.png')
+l_right.title('Balanced Article Discovery through Playful User Nudging')
 #### SIDEBAR ######
 st.sidebar.header('Options')
 add_selectbox = st.sidebar.selectbox(
     'Choose a clustering algorithm:',
     ('KMeans', 'Agglomerative Clustering', 'OPTICS')
 )
-number = st.sidebar.slider("Choose distance of suggestion to user:", 1, 100)
 left_column, right_column = st.columns(2)
 
 ### DATA LOADING ###
@@ -45,16 +46,19 @@ user_red = umap_transform(reducer, user_embedding)
 user_test_red = umap_transform(reducer, test_embedding)
 
 if 'user' not in st.session_state:
-    st.session_state['user'] = []
+    st.session_state['user'] = user_test_red[3] # todo replace
+
+if 'user_old' not in st.session_state:
+    st.session_state['user_old'] = st.session_state['user']
 
 if 'article_mask' not in st.session_state:
     st.session_state['article_mask'] = np.array([True]*(int(config['DATA']['NoHeadlines'])+1)) # +1 because indexing in pandas is apparently different
 
-# todo remove
-st.session_state.user = user_test_red[3]
 
 ### 1. NEWS RECOMMENDATIONS ###
 left_column.header('Newsfeed')
+left_column.write("Below, you see your personalized newsfeed.")
+
 click_predictor = ClickPredictor("test")
 ranking_module = RankingModule(click_predictor)
 
@@ -71,10 +75,14 @@ for index, article, button in zip(article_recommendations[0], article_recommenda
         click_predictor.update_step(article, 1)
         # todo replace
         # st.session_state.user = click_predictor.get_personal_user_embedding()
+        st.session_state.user_old = st.session_state.user
         st.session_state.user = user_test_red[index]
 
 ### 2. CLUSTERING ####
 right_column.header('Clustering')
+right_column.write("Here you can see, where you are in comparison to other users, and how your click behaviour "
+                   "influences your position.")
+
 model = None
 if add_selectbox == 'KMeans':
     model = KMeansWrapper()
@@ -88,12 +96,12 @@ else:
 model.train(user_red)
 model.extract_representations(user_red)  # return tuple (clusterid, location)
 prediction = model.predict(st.session_state.user)
-cluster_representant = model.interpret(prediction)
-user_suggestion = model.suggest(cluster_representant, metric=number)
+# cluster_representant = model.interpret(prediction)
+# user_suggestion = model.suggest(cluster_representant, metric=number)
 
-right_column.markdown(f"**Your cluster**: {prediction}")
-right_column.markdown(f"Would you like to see a user from **Cluster {user_suggestion[0]}**?")
-model.visualize(user_red, st.session_state.user, user_suggestion[1])
+right_column.markdown(f"**You are assigned to cluster** {prediction}")
+# right_column.markdown(f"Would you like to see a user from **Cluster {user_suggestion[0]}**?")
+model.visualize(user_red, [("You", st.session_state.user), ("Previous position", st.session_state.user_old)])
 right_column.plotly_chart(model.figure)
 
 # ### 2.2. INTERPRETING ###

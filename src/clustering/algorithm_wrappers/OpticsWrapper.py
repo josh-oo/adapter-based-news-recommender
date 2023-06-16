@@ -33,5 +33,5 @@ class OpticsWrapper(ClusteringAlg):
         dists = euclidean_distances(user.reshape(1, -1), locations)
         return np.argmin(dists)
 
-    def visualize(self, data, user=None, representant=None):
-        super().visualize(data, self.labels, user, representant)
+    def visualize(self, data, points=None):
+        super().visualize(data, self.labels, points)
