@@ -15,19 +15,19 @@ class ClickPredictor():
       commit_has (str) : the corresponding hash if you want to use a certain version for example "748fad327878bbfbba33b55059259bbbb28046ad"
       device (str) : if you want to execute it on a certain device for example "cpu" or "cuda"
     """
-    config = BertConfigAdapters.from_pretrained(huggingface_url, revision=commit_hash)
-    self.model = BertForSequenceClassificationAdapters.from_pretrained(huggingface_url, revision=commit_hash)
-    self.tokenizer = AutoTokenizer.from_pretrained(huggingface_url, revision=commit_hash)
-    
-    #load user mapping
-    self.user_mapping = {}
-    #user_mapping_file = hf_hub_download(repo_id=huggingface_url, filename="user_mapping.json", revision=commit_hash)
-    #with open(user_mapping_file) as f:
-    #    self.user_mapping = json.load(f)
-        
-    self.device = device
-    if self.device is not None:
-      self.model.to(device)
+    # config = BertConfigAdapters.from_pretrained(huggingface_url, revision=commit_hash)
+    # self.model = BertForSequenceClassificationAdapters.from_pretrained(huggingface_url, revision=commit_hash)
+    # self.tokenizer = AutoTokenizer.from_pretrained(huggingface_url, revision=commit_hash)
+    #
+    # #load user mapping
+    # self.user_mapping = {}
+    # #user_mapping_file = hf_hub_download(repo_id=huggingface_url, filename="user_mapping.json", revision=commit_hash)
+    # #with open(user_mapping_file) as f:
+    # #    self.user_mapping = json.load(f)
+    #
+    # self.device = device
+    # if self.device is not None:
+    #   self.model.to(device)
 
   def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM"):
     """
@@ -40,19 +40,19 @@ class ClickPredictor():
       scores : (List[int]) : a score for each headline specifying a probability for a click event (1.0 = 100%)
       word_level_deviations (List[dict]): a list of dicts containing the headlines words and the deviation compared to the unpersonalize net
     """
-    assert user_id == "CUSTOM" or user_id in self.user_mapping.keys(), "Given user id is not available"
-
-    #the personal user embedding is saved at the last embedding matrix index
-    user_index = torch.tensor([len(self.model.user_embeddings.weight) -1])
-
-    if user_id != "CUSTOM":
-      user_index = torch.tensor([self.user_mapping[user_id]])
-    inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
-    if self.device is not None:
-      inputs = inputs.to(device)
-      user_index = user_index.to(device)
-    model_outputs = self.model(**inputs, users=user_index.unsqueeze(dim=0))
-    #TODO process model_outputs
+    # assert user_id == "CUSTOM" or user_id in self.user_mapping.keys(), "Given user id is not available"
+    #
+    # #the personal user embedding is saved at the last embedding matrix index
+    # user_index = torch.tensor([len(self.model.user_embeddings.weight) -1])
+    #
+    # if user_id != "CUSTOM":
+    #   user_index = torch.tensor([self.user_mapping[user_id]])
+    # inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
+    # if self.device is not None:
+    #   inputs = inputs.to(device)
+    #   user_index = user_index.to(device)
+    # model_outputs = self.model(**inputs, users=user_index.unsqueeze(dim=0))
+    # #TODO process model_outputs
     #dummy results:
     scores = [0.9, 0.3, 0.8]
     word_deviations = [
@@ -72,7 +72,7 @@ class ClickPredictor():
     """
 
     #the personal user embedding is saved at the last embedding matrix index
-    user_index = torch.tensor([len(self.model.user_embeddings.weight) -1])
+    # user_index = torch.tensor([len(self.model.user_embeddings.weight) -1])
 
     #TODO implement online learning
     pass
@@ -99,7 +99,7 @@ class RankingModule():
       the clickpredictor used to rank the headlines
     """
     self.click_predictor = click_predictor
-    self.similarity_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
+    # self.similarity_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
   def rank_headlines(self, ids : List[int], headlines : List[str], user_id : str = "CUSTOM", take_top_k : int = 10, exploration_ratio : float = 0.2):
     """
@@ -112,52 +112,52 @@ class RankingModule():
       exploration_rati (float) : the ratio of articles which are used for exploration (in the range of 0.0 and 1.0)
     :return: list of tuples containing the sorted candidate strings, the id and the score for example: [("Lorem ipsum ...", 2, 0.78)]
     """
-    assert len(headlines) > take_top_k
-    assert exploration_ratio > 0.0 and exploration_ratio < 1.0
-    assert len(headlines) == len(ids)
-    
-    scores, _ = self.click_predictor.calculate_scores(headlines, user_id)
-
-    headlines_sorted = sorted(headlines, key=scores)
-    ids_sorted =sorted(ids, key=scores)
-    scores_sorted = sorted(scores)
-    headlines_ids_sorted = zip(headlines_sorted, ids_sorted, scores_sorted)
-
-    k_best = int(take_top_k * (1.0 - exploration_ratio))
-
-    similarity_threshold = 0.5
-
-    selected_headlines = []
-    while len(selected_headlines) < k_best and len(headlines_ids_sorted) > 0:
-      candidate, id, score = headlines_ids_sorted.pop(0)
-
-      #calculate similarity to already existing candidates
-      similar_headline_already_selected = False
-      for item in selected_headline:
-        scores = self.similarity_scorer.score(candidate, item)
-        if scores > similarity_threshold:
-          similar_headline_already_selected = True
-          break
-
-      if similar_headline_already_selected == False:
-        selected_headlines.append((candidate, id, score))
-
-    #reverse headlines for low ranked articles
-    headlines_ids_sorted = reversed(headlines_ids_sorted)
-
-    #fill the remaining space with exploration headlines
-    while len(selected_headlines) < take_top_k and len(headlines_ids_sorted) > 0:
-      candidate, id, score = headlines_ids_sorted.pop(0)
-
-      #calculate similarity to already existing candidates
-      similar_headline_already_selected = False
-      for item in selected_headline:
-        scores = self.similarity_scorer.score(candidate, item)
-        if scores > similarity_threshold:
-          similar_headline_already_selected = True
-          break
-
-      if similar_headline_already_selected == False:
-        selected_headlines.append((candidate, id, score))
-
-    return selected_headlines
+    # assert len(headlines) > take_top_k
+    # assert exploration_ratio > 0.0 and exploration_ratio < 1.0
+    # assert len(headlines) == len(ids)
+    #
+    # scores, _ = self.click_predictor.calculate_scores(headlines, user_id)
+    #
+    # headlines_sorted = sorted(headlines, key=scores)
+    # ids_sorted =sorted(ids, key=scores)
+    # scores_sorted = sorted(scores)
+    # headlines_ids_sorted = zip(headlines_sorted, ids_sorted, scores_sorted)
+    #
+    # k_best = int(take_top_k * (1.0 - exploration_ratio))
+    #
+    # similarity_threshold = 0.5
+    #
+    # selected_headlines = []
+    # while len(selected_headlines) < k_best and len(headlines_ids_sorted) > 0:
+    #   candidate, id, score = headlines_ids_sorted.pop(0)
+    #
+    #   #calculate similarity to already existing candidates
+    #   similar_headline_already_selected = False
+    #   for item in selected_headline:
+    #     scores = self.similarity_scorer.score(candidate, item)
+    #     if scores > similarity_threshold:
+    #       similar_headline_already_selected = True
+    #       break
+    #
+    #   if similar_headline_already_selected == False:
+    #     selected_headlines.append((candidate, id, score))
+    #
+    # #reverse headlines for low ranked articles
+    # headlines_ids_sorted = reversed(headlines_ids_sorted)
+    #
+    # #fill the remaining space with exploration headlines
+    # while len(selected_headlines) < take_top_k and len(headlines_ids_sorted) > 0:
+    #   candidate, id, score = headlines_ids_sorted.pop(0)
+    #
+    #   #calculate similarity to already existing candidates
+    #   similar_headline_already_selected = False
+    #   for item in selected_headline:
+    #     scores = self.similarity_scorer.score(candidate, item)
+    #     if scores > similarity_threshold:
+    #       similar_headline_already_selected = True
+    #       break
+    #
+    #   if similar_headline_already_selected == False:
+    #     selected_headlines.append((candidate, id, score))
+    #
+    return ids[:take_top_k], headlines[:take_top_k]
