@@ -1,13 +1,18 @@
 import configparser
+import json
+
 import streamlit as st
 import numpy as np
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.clustering.algorithm_wrappers.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
 
-from src.utils import fit_standardizer, standardize_data, load_data, load_headlines
+from src.utils import fit_standardizer, standardize_data, load_data, load_headlines, \
+    load_normalized_category_frequencies, generate_wordcloud
 
 st.set_page_config(
     page_title="badpun - Alternative Suggestion",
@@ -95,11 +100,11 @@ right_column.header('Clustering')
 model.visualize(user_red, [("Actual you", st.session_state.user), ("Feed you are seeing", exemplar[1])])
 right_column.plotly_chart(model.figure)
 
-# ### 2.2. INTERPRETING ###
-# wordcloud = WordCloud().generate_from_frequencies(user)
-#
-# # Display the generated image:
-# right_column.imshow(wordcloud, interpolation='bilinear')
-# right_column.axis("off")
-# right_column.show()
-# st.pyplot()
+### 2.2. INTERPRETING ###
+wordcloud = generate_wordcloud(config, model.labels, number)
+
+# Display the generated image:
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis("off")
+plt.show()
+right_column.pyplot(plt)

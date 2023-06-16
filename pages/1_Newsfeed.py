@@ -1,13 +1,15 @@
 import configparser
 import streamlit as st
 import numpy as np
+
 from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.clustering.algorithm_wrappers.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
-
-from src.utils import fit_standardizer, standardize_data, load_data, load_headlines
+import matplotlib.pyplot as plt
+from src.utils import fit_standardizer, standardize_data, load_data, load_headlines, \
+    generate_wordcloud
 
 st.set_page_config(
     page_title="badpun - Newsfeed",
@@ -96,19 +98,17 @@ else:
 model.train(user_red)
 model.extract_representations(user_red)  # return tuple (clusterid, location)
 prediction = model.predict(st.session_state.user)
-# cluster_representant = model.interpret(prediction)
-# user_suggestion = model.suggest(cluster_representant, metric=number)
 
 right_column.markdown(f"**You are assigned to cluster** {prediction}")
-# right_column.markdown(f"Would you like to see a user from **Cluster {user_suggestion[0]}**?")
 model.visualize(user_red, [("You", st.session_state.user), ("Previous position", st.session_state.user_old)])
 right_column.plotly_chart(model.figure)
 
 # ### 2.2. INTERPRETING ###
-# wordcloud = WordCloud().generate_from_frequencies(user)
-#
-# # Display the generated image:
-# right_column.imshow(wordcloud, interpolation='bilinear')
-# right_column.axis("off")
-# right_column.show()
-# st.pyplot()
+
+wordcloud = generate_wordcloud(config, model.labels, prediction)
+
+# Display the generated image:
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis("off")
+plt.show()
+right_column.pyplot(plt)
