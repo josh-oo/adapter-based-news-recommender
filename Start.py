@@ -22,12 +22,11 @@ buttons = [column.button(f"User {i+1}", use_container_width=True) for i, column 
 # todo load users
 users = [['sport'],['politics'], ['lifestyle']]
 
-# todo initialize as 1 in proper dimension
-if 'user' not in st.session_state:
-    st.session_state['user'] = []
+# # todo initialize as 1 in proper dimension
+# if 'user' not in st.session_state:
+#     st.session_state['user'] = []
 
-for user, button in zip(users, buttons):
-    if button:
-        st.session_state.user = user
-
-print(st.session_state.user)
+# todo plug in when ready
+# for user, button in zip(users, buttons):
+#     if button:
+#         st.session_state.user = user
