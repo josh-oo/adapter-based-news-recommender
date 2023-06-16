@@ -147,7 +147,7 @@ class RankingModule():
     headlines_ids_sorted = reversed(headlines_ids_sorted)
 
     while len(selected_headlines) < k_exploration:
-      candidate, id = headlines_ids_sorted[0]
+      candidate, id, score = headlines_ids_sorted[0]
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
