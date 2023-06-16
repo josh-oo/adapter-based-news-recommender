@@ -114,6 +114,12 @@ class ClusteringAlg:
             except ValueError: # checks if float
                 print("Not a valid suggestion metric. Pass value 'max' or percentage in between 1 and 100")
 
+    def get_cluster_representant(self, id):
+        if id > len(self.representants[0]):
+            raise ValueError
+        labels, locations = self.representants
+        return labels[id], locations[id]
+
     def visualize(self, data, labels, points=None) -> go:
         #TODO: plot colour also
         n_components = len(data[0])
