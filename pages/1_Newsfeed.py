@@ -107,5 +107,4 @@ wordcloud = generate_wordcloud(st.session_state.config, model.labels, prediction
 # Display the generated image:
 plt.imshow(wordcloud, interpolation='bilinear')
 plt.axis("off")
-plt.show()
 right_column.pyplot(plt)

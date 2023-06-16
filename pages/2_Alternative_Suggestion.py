@@ -12,7 +12,7 @@ from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
 
 from src.utils import fit_standardizer, standardize_data, load_data, load_headlines, \
-    load_normalized_category_frequencies, generate_wordcloud
+    load_normalized_category_frequencies, generate_wordcloud, get_mind_id_from_index
 
 st.set_page_config(
     page_title="badpun - Alternative Suggestion",
@@ -67,9 +67,9 @@ st.write(f"Your actual cluster is {prediction}. We recommend you to have a look 
 number = st.number_input('Cluster', min_value=0, max_value=int(config['Clustering']['NoClusters']), value=user_suggestion[0])
 
 # get represenatnt of cluster chosen by user
-exemplar = model.get_cluster_representant(number)
+exemplar_embedding, exemplar_index = model.get_cluster_representant(number)
 #todo get id from suggestion
-id = "U91029"
+id = get_mind_id_from_index(exemplar_index)
 
 ### 2. NEWS RECOMMENDATIONS ###
 
