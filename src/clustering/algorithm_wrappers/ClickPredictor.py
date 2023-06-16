@@ -101,18 +101,27 @@ class RankingModule():
     self.click_predictor = click_predictor
     self.similarity_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
-  def rank_headlines(self, headlines : List[str], user_id : str = "CUSTOM", take_top_k : int = 10, exploration_ratio : float = 0.2):
+  def rank_headlines(self, ids : List[int], headlines : List[str], user_id : str = "CUSTOM", take_top_k : int = 10, exploration_ratio : float = 0.2):
     """
     get the k top ranked (distinct) articles including some exploration articles
     :param
+      ids (List[int]) : list of ids to re-identify returned headlines and avoid duplicated "user-impressions"
       headlines (List[str]) : the candidate headlines to rank
       user_id (str) : the user
       take_top_k (int) : the number of articles to return
       exploration_rati (float) : the ratio of articles which are used for exploration (in the range of 0.0 and 1.0)
+    :return: list of tuples containing the sorted candidate strings, the id and the score for example: [("Lorem ipsum ...", 2, 0.78)]
     """
+    assert len(headlines) > take_top_k
+    assert exploration_ratio > 0.0 and exploration_ratio < 1.0
+    assert len(headlines) == len(ids)
+    
     scores, _ = self.click_predictor.calculate_scores(headlines, user_id)
 
     headlines_sorted = sorted(headlines, key=scores)
+    ids_sorted =sorted(ids, key=scores)
+    scores_sorted = sorted(scores)
+    headlines_ids_sorted = zip(headlines_sorted, ids_sorted, scores_sorted)
 
     k_best = int(take_top_k * (1.0 - exploration_ratio))
 
@@ -120,7 +129,7 @@ class RankingModule():
 
     selected_headlines = []
     while len(selected_headlines) < k_best:
-      candidate = headlines_sorted[0]
+      candidate, id, score = headlines_ids_sorted[0]
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
@@ -131,13 +140,14 @@ class RankingModule():
           break
 
       if similar_headline_already_selected == False:
-        selected_headlines.append(candidate)
+        selected_headlines.append((candidate, id, score))
+      headlines_ids_sorted.pop(0)
 
     #reverse headlines for low ranked articles
-    headlines_sorted = reversed(headlines_sorted)
+    headlines_ids_sorted = reversed(headlines_ids_sorted)
 
     while len(selected_headlines) < k_exploration:
-      candidate = headlines_sorted[0]
+      candidate, id = headlines_ids_sorted[0]
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
@@ -148,6 +158,7 @@ class RankingModule():
           break
 
       if similar_headline_already_selected == False:
-        selected_headlines.append(candidate)
+        selected_headlines.append((candidate, id, score))
+      headlines_ids_sorted.pop(0)
 
     return selected_headlines
