@@ -156,25 +156,6 @@ class ClusteringAlg:
                                  mode='markers', name=label)
                                  # marker_color=[self.predict(user)]) # todo
                 )
-
-            # if user is not None:
-            #     fig.add_trace(
-            #         go.Scatter3d(x=[user[0]], y=[user[1]], z=[user[2]],
-            #                      marker_symbol=['diamond'],
-            #                      marker=dict(
-            #                          size=5),
-            #                      mode='markers', name="User")
-            #                      # marker_color=[self.predict(user)]) # todo
-            #     )
-            # if representant is not None:
-            #     fig.add_trace(
-            #         go.Scatter3d(x=[representant[0]], y=[representant[1]], z=[representant[2]],
-            #                      marker_symbol=['diamond'],
-            #                      marker=dict(
-            #                          size=5),
-            #                      mode='markers', name="Suggestion")
-            #                      # marker_color=[self.predict(user)])) #todo
-            #     )
         else:
             raise ValueError
         self.figure = fig
