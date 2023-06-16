@@ -28,11 +28,8 @@ add_selectbox = st.sidebar.selectbox(
 left_column, right_column = st.columns(2)
 
 ### DATA LOADING ###
-
-config = configparser.ConfigParser()
-config.read('config.ini')
-embedding_path = config['DATA']['UserEmbeddingPath']
-test_path = config['DATA']['TestUserEmbeddingPath']
+embedding_path = st.session_state.config['DATA']['UserEmbeddingPath']
+test_path = st.session_state.config['DATA']['TestUserEmbeddingPath']
 
 user_embedding = load_data(embedding_path)  # todo get_historic_user_embeddings
 test_embedding = load_data(test_path)
@@ -43,7 +40,7 @@ user_embedding = standardize_data(scaler, user_embedding)
 test_embedding = standardize_data(scaler, test_embedding)
 
 # transform data
-reducer = fit_reducer(config['UMAP'], user_embedding)
+reducer = fit_reducer(st.session_state.config['UMAP'], user_embedding)
 user_red = umap_transform(reducer, user_embedding)
 user_test_red = umap_transform(reducer, test_embedding)
 
@@ -54,7 +51,7 @@ if 'user_old' not in st.session_state:
     st.session_state['user_old'] = st.session_state['user']
 
 if 'article_mask' not in st.session_state:
-    st.session_state['article_mask'] = np.array([True]*(int(config['DATA']['NoHeadlines'])+1)) # +1 because indexing in pandas is apparently different
+    st.session_state['article_mask'] = np.array([True]*(int(st.session_state.config['DATA']['NoHeadlines'])+1)) # +1 because indexing in pandas is apparently different
 
 
 ### 1. NEWS RECOMMENDATIONS ###
@@ -64,7 +61,7 @@ left_column.write("Below, you see your personalized newsfeed.")
 click_predictor = ClickPredictor("test")
 ranking_module = RankingModule(click_predictor)
 
-headlines = load_headlines(config['DATA'])
+headlines = load_headlines(st.session_state.config['DATA'])
 article_recommendations = ranking_module.rank_headlines(np.nonzero(st.session_state.article_mask)[0], list(headlines[st.session_state.article_mask]))
 
 article_fields = [left_column.button(article, use_container_width=True) for index, article
@@ -105,7 +102,7 @@ right_column.plotly_chart(model.figure)
 
 # ### 2.2. INTERPRETING ###
 
-wordcloud = generate_wordcloud(config, model.labels, prediction)
+wordcloud = generate_wordcloud(st.session_state.config, model.labels, prediction)
 
 # Display the generated image:
 plt.imshow(wordcloud, interpolation='bilinear')

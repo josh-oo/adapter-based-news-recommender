@@ -12,6 +12,11 @@ l_small, l_right = st.columns([1, 2])
 l_small.image('media/logo.png')
 l_right.title('Balanced Article Discovery through Playful User Nudging')
 
+config = configparser.ConfigParser()
+config.read('config.ini')
+if 'config' not in st.session_state:
+    st.session_state['config'] = config
+
 ### COLD START ###
 
 st.write('To start off, choose a user which matches your interest most:')
