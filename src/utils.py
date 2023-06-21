@@ -60,4 +60,6 @@ def generate_wordcloud(_config, labels, cluster_id):
     category_freq_current_cluster = user_category_frequ.loc[user_category_frequ['user'].isin(user_ids_current_cluster)]
     freq = category_freq_current_cluster.iloc[:, 2:].sum()
 
-    return WordCloud().generate_from_frequencies(freq)
+    return WordCloud(width = 800,height = 600,
+                     background_color="rgba(255, 255, 255, 0)", mode="RGBA")\
+        .generate_from_frequencies(freq)
