@@ -70,8 +70,15 @@ article_fields = [left_column.button(article, use_container_width=True) for inde
 for index, article, button in zip(article_recommendations[0], article_recommendations[1], article_fields):
     if button:
         # todo negative clicks
-        st.session_state.article_mask[index] = False
+        st.session_state.article_mask[:index] = False
         click_predictor.update_step(article, 1)
+        # not clicked articles are considered negative update steps
+        # i dont think there is an easier way to code this as the script is rerun on every interaction
+        # but it is ugly
+        for unread_article in article_recommendations[1]:
+            if unread_article == article:
+                break
+            click_predictor.update_step(unread_article, 0)
         # todo replace
         # st.session_state.user = click_predictor.get_personal_user_embedding()
         st.session_state.user_old = st.session_state.user
