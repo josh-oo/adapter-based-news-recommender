@@ -4,7 +4,7 @@ import math
 from torch import nn
 import torch
 
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss, BCELoss
 
 from transformers.modeling_outputs import (
     SequenceClassifierOutput,
@@ -31,33 +31,35 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
             config.classifier_dropout if config.classifier_dropout is not None else config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
-        self.classifier = nn.Linear(config.num_classification_heads, config.num_labels)
+        self.classifier = nn.Linear(1, config.num_labels)
 
-        adapter_size = config.hidden_size * 2# + config.intermediate_size
-        embedding_size = config.embedding_size
+        self.adapter_size = config.hidden_size * 2# + config.intermediate_size
+        self.embedding_size = config.embedding_size
 
-        self.user_embeddings = nn.Embedding(config.num_users, embedding_size)
-        self.user_projection = nn.Linear(embedding_size, adapter_size)
+        self.user_embeddings = nn.Embedding(config.num_users, self.embedding_size)
+        #add additional projection layer if adapter_size != self.embedding_size
+        if self.adapter_size != self.embedding_size:
+          self.user_projection = nn.Linear(self.embedding_size, self.adapter_size)
         self.user_dropout = torch.nn.Dropout(config.user_dropout_prob)
-        self.user_norm = torch.nn.LayerNorm(embedding_size, eps=config.layer_norm_eps)
+        self.user_norm = torch.nn.LayerNorm(self.embedding_size, eps=config.layer_norm_eps)
         self.adapter_layer = BertLayerAdapters(config)
 
         self.sample_camparators = torch.nn.parameter.Parameter(data=torch.zeros(config.num_classification_heads,config.hidden_size), requires_grad=True)
         self.sample_camparators.data.normal_(mean=0.0, std=config.initializer_range)
         self.sample_norm = torch.nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
 
-        self.register_buffer("adapter_bias", torch.ones(1, adapter_size))
+        self.register_buffer("adapter_bias", torch.ones(1, self.adapter_size))
 
         # Initialize weights and apply final processing
         self.post_init()
 
-    def calculate_contrastive_loss(self, positive_indices, negative_indices, latent, margin: float = 0.5):
+    def calculate_contrastive_loss(self, current_user, positive_indices, negative_indices, margin: float = 0.5):
         """
         Computes Contrastive Loss
         """
 
-        positive_samples = torch.combinations(positive_indices)
-        negative_samples = torch.cartesian_prod(positive_indices, negative_indices)
+        positive_samples = torch.cartesian_prod(current_user, positive_indices.squeeze(dim=0))
+        negative_samples = torch.cartesian_prod(current_user, negative_indices.squeeze(dim=0))
 
 
         #similar labesl are zeros / disimilar labels are ones
@@ -67,16 +69,13 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
         all_contrastive_samples = torch.concat([positive_samples, negative_samples],dim=0)
         label  = torch.concat([positive_samples_labels, negative_samples_labels],dim=0)
 
-        #x1 = self.user_embeddings(all_contrastive_samples[:,0])
-        #x2 = self.user_embeddings(all_contrastive_samples[:,1])
+        x1 = self.user_embeddings(all_contrastive_samples[:,0])
+        x2 = self.user_embeddings(all_contrastive_samples[:,1])
 
-        #x1 = torch.nn.functional.normalize(x1, p=2, dim=1)
-        #x2 = torch.nn.functional.normalize(x2, p=2, dim=1)
-        x1 = torch.index_select(latent, 0, all_contrastive_samples[:,0])
-        x2 = torch.index_select(latent, 0, all_contrastive_samples[:,1])
+        x1 = torch.nn.functional.normalize(x1, p=2, dim=-1)
+        x2 = torch.nn.functional.normalize(x2, p=2, dim=-1)
 
         dist = torch.nn.functional.pairwise_distance(x1, x2)
-        #dist = 1 - torch.nn.functional.cosine_similarity(x1, x2)
 
         loss = (1 - label) * torch.pow(dist, 2) + (label) * torch.pow(torch.clamp(margin - dist, min=0.0), 2)
         loss = torch.mean(loss)
@@ -92,6 +91,8 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
         head_mask: Optional[torch.Tensor] = None,
         inputs_embeds: Optional[torch.Tensor] = None,
         users: Optional[torch.Tensor] = None,
+        positive_samples: Optional[torch.Tensor] = None,
+        negative_samples: Optional[torch.Tensor] = None,
         labels: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
@@ -104,6 +105,10 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
             `config.num_labels > 1` a classification loss is computed (Cross-Entropy).
         """
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if len(input_ids.shape) > 2:
+          input_ids = input_ids.squeeze(dim=0)
+          attention_mask = attention_mask.squeeze(dim=0)
 
         outputs = self.bert(
             input_ids,
@@ -119,26 +124,32 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
 
         unpooled_output = outputs[0]
 
-        users = users.squeeze(dim=0)
+        adapter_values = self.adapter_bias
 
-        user_embeds = self.user_embeddings(users).unsqueeze(dim=1)
-        user_embeds = self.user_norm(user_embeds)
-        user_embeds = self.user_dropout(user_embeds)
-        adapter_values = self.user_projection(user_embeds)
-        adapter_values = adapter_values + self.adapter_bias
+        if users is not None:
+          users = users.squeeze(dim=0)
+          user_embeds = self.user_embeddings(users)
+          user_embeds = self.user_norm(user_embeds)
+          user_embeds = self.user_dropout(user_embeds)
+          if self.adapter_size != self.embedding_size:
+            adapter_values = self.adapter_bias + self.user_projection(user_embeds)
+          else:
+            adapter_values = self.adapter_bias + user_embeds
+
+        extended_mask = self.bert.get_extended_attention_mask(attention_mask, input_ids.size())
 
         unpooled_output = self.adapter_layer(
             unpooled_output,
-            self.bert.get_extended_attention_mask(attention_mask, input_ids.size()),
+            extended_mask,
             output_attentions=output_attentions,
-            user_embeds=adapter_values,
+            user_embeds=adapter_values.unsqueeze(dim=1),
         )
 
         if outputs.hidden_states is not None:
           outputs.hidden_states = outputs.hidden_states + (unpooled_output[0],)
         if outputs.attentions is not None:
           outputs.attentions = outputs.attentions + (unpooled_output[1],)
-        
+
         pooled_output = self.bert.pooler(unpooled_output[0])
 
         pooled_output = self.dropout(pooled_output)
@@ -146,13 +157,12 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
         samples = self.sample_norm(self.sample_camparators)
         samples = self.dropout(samples)
 
-        #logits = torch.inner(torch.nn.functional.normalize(pooled_output, p=2, dim=-1), torch.nn.functional.normalize(samples, p=2, dim=-1))
         logits = torch.inner(pooled_output, samples)
-        #logits = self.classifier(pooled_output)
+
+        click_prediction = self.classifier(logits.detach())
 
         loss = None
         if labels is not None:
-            labels = labels.squeeze(dim=0)
             if self.config.problem_type is None:
                 if self.num_labels == 1:
                     self.config.problem_type = "regression"
@@ -168,30 +178,27 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
                 else:
                     loss = loss_fct(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss_fct = CrossEntropyLoss(reduction="none")
-                loss = loss_fct(logits, labels)
+                loss_fct = CrossEntropyLoss()
+                if input_ids.shape[0] > 1:
+                  loss = loss_fct(logits.view(-1, 5), labels)
 
-                negative_mask = (1- labels)
-                positive_mask = labels
-                
-                loss_negative = (loss * negative_mask).sum() / torch.max(torch.tensor(1,device=labels.device), negative_mask.sum())
-                loss_positive = (loss * positive_mask).sum() / torch.max(torch.tensor(1,device=labels.device), positive_mask.sum())
+                  click_prediction_labels = torch.zeros(5, dtype=torch.long, device=click_prediction.device)
+                  click_prediction_labels[labels] = torch.tensor(1, device=click_prediction.device)
 
-                loss = (loss_negative + loss_positive) * 0.5
+                  loss_fct = CrossEntropyLoss(weight=torch.tensor([0.25,1.], device=click_prediction.device))
+                  loss += loss_fct(click_prediction.view(-1, 2), click_prediction_labels)
+                else:
+
+                  loss = loss_fct(click_prediction.view(-1, 2), labels)
+
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
 
 
-            negative_indices = torch.arange(0, labels.shape[0] - torch.sum(labels), device=labels.device)
-            positive_indices = torch.arange(0, torch.sum(labels), device=labels.device) + negative_indices.shape[0]
-
-            normalized_embeddings = torch.nn.functional.normalize(adapter_values.squeeze(dim=1), p=2, dim=-1)
-
-            contrastive_loss = self.calculate_contrastive_loss(positive_indices, negative_indices, normalized_embeddings)
-            loss += contrastive_loss
-
-        logits = logits.unsqueeze(dim=0)
+            if positive_samples is not None and negative_samples is not None:
+              contrastive_loss = self.calculate_contrastive_loss(users, positive_samples, negative_samples)
+              loss += contrastive_loss
 
         if not return_dict:
             output = (logits,) + outputs[2:]
@@ -199,7 +206,7 @@ class BertForSequenceClassificationAdapters(BertForSequenceClassification):
 
         return SequenceClassifierOutput(
             loss=loss,
-            logits=logits,
+            logits=click_prediction,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
@@ -233,7 +240,7 @@ class BertLayerAdapters(BertLayer):
     ) -> Tuple[torch.Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
-        
+
         #added
         multiply_keys = user_embeds[:,:,:self.config.hidden_size]
         multiply_values = user_embeds[:,:,self.config.hidden_size:self.config.hidden_size*2]
