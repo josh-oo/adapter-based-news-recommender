@@ -1,13 +1,11 @@
-import configparser
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from src.clustering.algorithm_wrappers.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
-from src.clustering.utils import umap_transform, fit_reducer
 
-from src.utils import fit_standardizer, standardize_data, load_data, load_headlines, \
-    generate_wordcloud, get_mind_id_from_index, generate_header
+from src.utils import load_headlines, \
+    generate_wordcloud, get_mind_id_from_index, generate_header, load_preprocess_data
 
 ### GENERAL PAGE INFO ###
 st.set_page_config(
@@ -20,21 +18,7 @@ config = st.session_state['config']
 
 ### DATA LOADING ###
 
-embedding_path = config['DATA']['UserEmbeddingPath']
-test_path = config['DATA']['TestUserEmbeddingPath']
-
-user_embedding = load_data(embedding_path)  # todo get_historic_user_embeddings
-test_embedding = load_data(test_path)
-
-# standardize data
-scaler = fit_standardizer(user_embedding)
-user_embedding = standardize_data(scaler, user_embedding)
-test_embedding = standardize_data(scaler, test_embedding)
-
-# transform data
-reducer = fit_reducer(config['UMAP'], user_embedding)
-user_red = umap_transform(reducer, user_embedding)
-user_test_red = umap_transform(reducer, test_embedding)
+user_red, user_test_red = load_preprocess_data()
 
 if 'user' not in st.session_state:
     st.session_state['user'] = user_test_red[3] # todo

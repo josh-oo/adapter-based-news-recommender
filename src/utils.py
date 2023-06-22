@@ -6,6 +6,8 @@ import streamlit as st
 from sklearn.preprocessing import StandardScaler
 from wordcloud import WordCloud
 
+from src.clustering.utils import fit_reducer, umap_transform
+
 
 @st.cache_data
 def fit_standardizer(embeddings):
@@ -70,3 +72,19 @@ def generate_header():
     l_small.image('media/logo_dark.png', use_column_width='always')
     l_right.title('Balanced Article Discovery')
     l_right.title('through Playful User Nudging')
+
+
+def load_preprocess_data():
+    embedding_path = st.session_state['config']['DATA']['UserEmbeddingPath']
+    test_path = st.session_state['config']['DATA']['TestUserEmbeddingPath']
+    user_embedding = load_data(embedding_path)  # todo get_historic_user_embeddings
+    test_embedding = load_data(test_path)
+    # standardize data
+    scaler = fit_standardizer(user_embedding)
+    user_embedding = standardize_data(scaler, user_embedding)
+    test_embedding = standardize_data(scaler, test_embedding)
+    # transform data
+    reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
+    user_red = umap_transform(reducer, user_embedding)
+    user_test_red = umap_transform(reducer, test_embedding)
+    return user_red, user_test_red

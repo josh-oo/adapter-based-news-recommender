@@ -9,7 +9,7 @@ from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
 import matplotlib.pyplot as plt
 from src.utils import fit_standardizer, standardize_data, load_data, load_headlines, \
-    generate_wordcloud, generate_header
+    generate_wordcloud, generate_header, load_preprocess_data
 
 ### GENERAL PAGE INFO ###
 
@@ -28,24 +28,10 @@ add_selectbox = st.sidebar.selectbox(
     'Choose a clustering algorithm:',
     ('KMeans', 'Agglomerative Clustering', 'OPTICS')
 )
-left_column, right_column = st.columns(2)
 
 ### DATA LOADING ###
-embedding_path = config['DATA']['UserEmbeddingPath']
-test_path = config['DATA']['TestUserEmbeddingPath']
 
-user_embedding = load_data(embedding_path)  # todo get_historic_user_embeddings
-test_embedding = load_data(test_path)
-
-# standardize data
-scaler = fit_standardizer(user_embedding)
-user_embedding = standardize_data(scaler, user_embedding)
-test_embedding = standardize_data(scaler, test_embedding)
-
-# transform data
-reducer = fit_reducer(config['UMAP'], user_embedding)
-user_red = umap_transform(reducer, user_embedding)
-user_test_red = umap_transform(reducer, test_embedding)
+user_red, user_test_red = load_preprocess_data()
 
 if 'user' not in st.session_state:
     st.session_state['user'] = user_test_red[3] # todo replace
@@ -57,11 +43,13 @@ if 'article_mask' not in st.session_state:
     st.session_state['article_mask'] = np.array([True]*(int(config['DATA']['NoHeadlines'])+1)) # +1 because indexing in pandas is apparently different
 
 
+left_column, right_column = st.columns(2)
+
 ### 1. NEWS RECOMMENDATIONS ###
 left_column.header('Newsfeed')
 left_column.write("Below, you see your personalized newsfeed.")
 
-click_predictor = ClickPredictor("test")
+click_predictor = ClickPredictor("test") # todo
 ranking_module = RankingModule(click_predictor)
 
 headlines = load_headlines(config['DATA'])
