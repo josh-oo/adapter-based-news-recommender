@@ -63,6 +63,7 @@ article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, un
 left_column, right_column = st.columns(2)
 left_column.header('Newsfeed')
 
+### 3.1 Newsfeed ###
 
 def button_callback_alternative(button_index, test):
     # set article  and all previous as read
@@ -76,12 +77,14 @@ article_fields = [left_column.button(article, use_container_width=True,
                   enumerate(zip(article_recommendations[0], article_recommendations[1]))]  # sorry for ugly
 
 
+### 3.2. INTERPRETING ###
+
 right_column.header('Clustering')
 # todo color whole recommended cluster
 model.visualize(user_red, [("Actual you", st.session_state.user), ("Feed you are seeing", exemplar_embedding)])
 right_column.plotly_chart(model.figure)
 
-### 2.2. INTERPRETING ###
+# todo these can be precaclulated
 wordcloud = generate_wordcloud(config, model.labels, number)
 
 # Display the generated image:
