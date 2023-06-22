@@ -53,9 +53,9 @@ click_predictor = ClickPredictor("test")
 ranking_module = RankingModule(click_predictor)
 
 headlines = load_headlines(config['DATA'])
-article_recommendations = ranking_module.rank_headlines(np.nonzero(st.session_state.article_mask)[0],
-                                                        list(headlines[st.session_state.article_mask]),
-                                                        user_id=id)
+unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
+unread_headlines = list(headlines[st.session_state.article_mask])
+article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id)
 
 
 ### 3. Page Layout ###
@@ -63,13 +63,18 @@ article_recommendations = ranking_module.rank_headlines(np.nonzero(st.session_st
 left_column, right_column = st.columns(2)
 left_column.header('Newsfeed')
 
-article_fields = [left_column.button(article, use_container_width=True) for index, article
-                  in zip(article_recommendations[0], article_recommendations[1])] # wtf python
 
-for index, article, button in zip(article_recommendations[0], article_recommendations[1], article_fields):
-    if button:
-        # todo negative clicks
-        st.session_state.article_mask[index] = False
+def button_callback_alternative(button_index, test):
+    # set article  and all previous as read
+    st.session_state.article_mask[article_recommendations[0][:button_index + 1]] = False
+
+
+article_fields = [left_column.button(article, use_container_width=True,
+                                     on_click=button_callback_alternative,
+                                     args=(button_index, 0))
+                  for button_index, (article_index, article) in
+                  enumerate(zip(article_recommendations[0], article_recommendations[1]))]  # sorry for ugly
+
 
 right_column.header('Clustering')
 # todo color whole recommended cluster
