@@ -45,7 +45,7 @@ def load_normalized_category_frequencies(path, user_mapping):
 
 def get_mind_id_from_index(id):
     user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
-    return user_mapping[id]
+    return list(user_mapping.keys())[list(user_mapping.values()).index(id)]
 
 
 def generate_wordcloud(_config, labels, cluster_id):
@@ -63,3 +63,10 @@ def generate_wordcloud(_config, labels, cluster_id):
     return WordCloud(width = 800,height = 600,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA")\
         .generate_from_frequencies(freq)
+
+
+def generate_header():
+    l_small, l_right = st.columns([1, 4])
+    l_small.image('media/logo_dark.png', use_column_width='always')
+    l_right.title('Balanced Article Discovery')
+    l_right.title('through Playful User Nudging')
