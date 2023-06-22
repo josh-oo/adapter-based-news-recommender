@@ -199,7 +199,7 @@ class RankingModule():
     assert exploration_ratio > 0.0 and exploration_ratio < 1.0
     assert len(headlines) == len(ids)
     
-    scores, _ = self.click_predictor.calculate_scores(headlines, user_id)
+    scores, _, _ = self.click_predictor.calculate_scores(headlines, user_id)
 
     headlines_sorted = sorted(headlines, key=scores)
     ids_sorted =sorted(ids, key=scores)
