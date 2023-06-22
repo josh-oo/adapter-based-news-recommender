@@ -5,6 +5,9 @@ import torch
 from rouge_score import rouge_scorer #pip install rouge-score
 from huggingface_hub import hf_hub_download
 import json
+import os
+import random
+import numpy as np
 
 class ClickPredictor():
   def __init__(self, huggingface_url : str, commit_hash : str = None, device : str = None):
@@ -24,8 +27,24 @@ class ClickPredictor():
     user_mapping_file = hf_hub_download(repo_id=huggingface_url, filename="user_mapping.json", revision=commit_hash)
     with open(user_mapping_file) as f:
         self.user_mapping = json.load(f)
+        
+    #append personal embedding to to embedding matrix
+    self.user_embedding_path = "personal_user_embedding.pt"
     
-    #TODO add "CUSTOM" user embedding
+    personal_user_embedding = torch.ones(1, self.model.config.embedding_size).normal_(mean=0.0, std=self.model.config.initializer_range)
+    if os.path.exists(self.user_embedding_path)
+        personal_user_embedding = torch.load(self.user_embedding_path)
+    else:
+        torch.save(personal_user_embedding, self.user_embedding_path)
+    
+    with torch.no_grad():
+        self.model.user_embeddings.weight.data = torch.concat([self.model.user_embeddings.weight.data, personal_user_embedding])
+        
+    #online learning hyperparameter
+    learning_rate = 1e-2 / 4
+    self.optim = torch.optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=0.1)
+    self.positive_training_sample_path = "training_samples_positive.txt"
+    self.negative_training_sample_path = "training_samples_negative.txt"
         
     self.device = device
     if self.device is not None:
@@ -154,11 +173,66 @@ def _extract_word_deviations(self, tokens : List[str], non_personal_attentions :
       new_label (int) : the label (in  {0,1}) 0 if the user did not like the new_headline, 1 if the user did like the new_headline
     """
 
+    #add sample to file
+    path = self.negative_training_sample_path if new_label == 0 else self.positive_training_sample_path
+    with open(path, "a") as sample_file:
+        sample_file.write(new_headline)
+    
+    #perform online learning step only if we got a new positive sample
+    if new_label != 1:
+        return
+        
+    #load all available negative samples
+    all_negative_samples = []
+    with open(filename) as f:
+        all_negative_samples = [line.rstrip() for line in f]
+    num_negative_samples = len(all_negative_samples)
+    if num_negative_samples == 0:
+        return
+        
+    #sample k=4 negative samples
+    k=4
+    negative_samples = random.choices(all_negative_samples, k=k)
+    all_samples = negative_samples + [new_headline]
+    
+    random_permutation = np.random.permutation(k + 1)
+    all_samples = np.array(all_samples)[random_permutation]
+    label = torch.tensor(np.where(random_permutation == 4)[0][0])
+    
     #the personal user embedding is saved at the last embedding matrix index
     user_index = torch.tensor([len(self.model.user_embeddings.weight) -1])
+    
+    inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
+    
+    if self.device is not None:
+        inputs = inputs.to(self.device)
+        user_index = user_index.to(self.device)
+        label = label.to(self.device)
+    
+    #freeze everything but the user_embeddings
+    
+    for param in model.parameters():
+        param.requires_grad = False
+    
+    for param in model.user_embeddings.parameters():
+        param.requires_grad = True
+  
+  
+    #perform online learning update step
+    model.train()
+    
+    output = model(**inputs, users=user_index.unsqueeze(dim=0), labels=label)
+    loss = output.loss
+    loss.backward()
 
-    #TODO implement online learning
-    pass
+    optimizer.step()
+    optimizer.zero_grad()
+    
+    model.eval()
+
+    #save updated personal user embedding
+    torch.save(self.model.user_embeddings.weight[-1].unsqueeze(dim=0), self.user_embedding_path)
+    
 
   def get_historic_user_embeddings(self):
     """
