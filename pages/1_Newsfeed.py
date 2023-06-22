@@ -34,14 +34,14 @@ add_selectbox = st.sidebar.selectbox(
 user_red, user_test_red = load_preprocess_data()
 
 if 'user' not in st.session_state:
-    st.session_state['user'] = user_test_red[3] # todo replace
+    st.session_state['user'] = user_test_red[3]  # todo replace
 
 if 'user_old' not in st.session_state:
     st.session_state['user_old'] = st.session_state['user']
 
 if 'article_mask' not in st.session_state:
-    st.session_state['article_mask'] = np.array([True]*(int(config['DATA']['NoHeadlines'])+1)) # +1 because indexing in pandas is apparently different
-
+    st.session_state['article_mask'] = np.array(
+        [True] * (int(config['DATA']['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
 left_column, right_column = st.columns(2)
 
@@ -49,35 +49,41 @@ left_column, right_column = st.columns(2)
 left_column.header('Newsfeed')
 left_column.write("Below, you see your personalized newsfeed.")
 
-click_predictor = ClickPredictor("test") # todo
+click_predictor = ClickPredictor("test")  # todo
 ranking_module = RankingModule(click_predictor)
 
 headlines = load_headlines(config['DATA'])
-article_recommendations = ranking_module.rank_headlines(np.nonzero(st.session_state.article_mask)[0], list(headlines[st.session_state.article_mask]))
+unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
+unread_headlines = list(headlines[st.session_state.article_mask])
+article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines)
 
-article_fields = [left_column.button(article, use_container_width=True) for index, article
-                  in zip(article_recommendations[0], article_recommendations[1])] # wtf python
 
-for index, article, button in zip(article_recommendations[0], article_recommendations[1], article_fields):
-    if button:
-        # todo negative clicks
-        st.session_state.article_mask[:index] = False
-        click_predictor.update_step(article, 1)
-        # not clicked articles are considered negative update steps
-        # i dont think there is an easier way to code this as the script is rerun on every interaction
-        # but it is ugly
-        for unread_article in article_recommendations[1]:
-            if unread_article == article:
-                break
-            click_predictor.update_step(unread_article, 0)
-        # todo replace
-        # st.session_state.user = click_predictor.get_personal_user_embedding()
-        st.session_state.user_old = st.session_state.user
-        st.session_state.user = user_test_red[index]
+def button_callback(button_index, article_index, headline):
+    # set article  and all previous as read
+    st.session_state.article_mask[article_recommendations[0][:button_index + 1]] = False
+
+    # give postive feedback for clicked headline
+    click_predictor.update_step(headline, 1)
+    # all previous non clicked articles are considered negative update steps
+    for unread_article in article_recommendations[1][:button_index]:
+        click_predictor.update_step(unread_article, 0)
+
+    # update user states
+    # todo replace
+    # st.session_state.user = click_predictor.get_personal_user_embedding()
+    st.session_state.user_old = st.session_state.user
+    st.session_state.user = user_test_red[article_index]
+
+
+article_fields = [left_column.button(article, use_container_width=True,
+                                     on_click=button_callback,
+                                     args=(button_index, article_index, article))
+                  for button_index, (article_index, article) in
+                  enumerate(zip(article_recommendations[0], article_recommendations[1]))]  # sorry for ugly
 
 ### 2. CLUSTERING ####
 right_column.header('Clustering')
-right_column.write("Here you can see, where you are in comparison to other users, and how your click behaviour "
+right_column.write("Here you can see where you are in comparison to other users, and how your click behaviour "
                    "influences your position.")
 
 model = None
