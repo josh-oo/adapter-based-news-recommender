@@ -138,15 +138,17 @@ class ClusteringAlg:
         elif n_components == 3:
             fig.add_trace(go.Scatter3d(x=data[:,0], y=data[:,1], z=data[:,2],
                                        mode='markers',
-                                       marker=dict(
-                                           size=1),
+                                       marker=dict(size=1),
                                        text=labels,
-                                       marker_color=labels, opacity=0.5, name="Users"))
+                                       hoverinfo="text+name",
+                                       marker_color=labels, opacity=0.5, name="Historic Users"))
             repr = self.representants[1]
             fig.add_trace(go.Scatter3d(x=repr[:,0], y=repr[:,1], z=repr[:,2],
                                        mode='markers',
                                        marker=dict(
                                            size=2),
+                                       text=list(range(len(repr))),
+                                       hoverinfo="text+name",
                                        marker_color=list(range(len(repr))), name="Exemplars"))
 
             for (label, point) in points:
@@ -155,6 +157,7 @@ class ClusteringAlg:
                                  marker_symbol=['diamond'],
                                  marker=dict(
                                      size=5),
+                                 hoverinfo="name",
                                  mode='markers', name=label)
                                  # marker_color=[self.predict(user)]) # todo
                 )
