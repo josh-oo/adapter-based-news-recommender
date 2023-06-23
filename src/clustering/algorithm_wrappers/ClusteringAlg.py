@@ -160,6 +160,7 @@ class ClusteringAlg:
                 )
         else:
             raise ValueError
+        fig.update_layout(height=800) # todo configure
         self.figure = fig
 
         def measure_performance(self, metric='chi'):
