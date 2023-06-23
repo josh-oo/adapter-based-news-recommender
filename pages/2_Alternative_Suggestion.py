@@ -86,8 +86,4 @@ right_column.plotly_chart(model.figure)
 
 # todo these can be precaclulated
 wordcloud = generate_wordcloud(config, model.labels, number)
-
-# Display the generated image:
-plt.imshow(wordcloud, interpolation='bilinear')
-plt.axis("off")
-right_column.pyplot(plt)
+right_column.image(wordcloud.to_array())

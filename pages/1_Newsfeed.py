@@ -1,4 +1,6 @@
 import configparser
+
+import plotly
 import streamlit as st
 import numpy as np
 
@@ -10,6 +12,7 @@ from src.clustering.utils import umap_transform, fit_reducer
 import matplotlib.pyplot as plt
 from src.utils import fit_standardizer, standardize_data, load_data, load_headlines, \
     generate_wordcloud, generate_header, load_preprocess_data
+# import streamlit_wordcloud as wc
 
 ### GENERAL PAGE INFO ###
 
@@ -104,7 +107,7 @@ prediction = model.predict(st.session_state.user)
 
 lower_left.markdown(f"**You are assigned to cluster** {prediction}")
 model.visualize(user_red, [("You", st.session_state.user), ("Previous position", st.session_state.user_old)])
-lower_left.plotly_chart(model.figure)
+lower_left.plotly_chart(model.figure, use_container_width=True)
 
 # ### 2.2. INTERPRETING ###
 lower_right.header('Interpretation')
@@ -112,6 +115,4 @@ lower_right.header('Interpretation')
 wordcloud = generate_wordcloud(config, model.labels, prediction)
 
 # Display the generated image:
-plt.imshow(wordcloud, interpolation='bilinear')
-plt.axis("off")
-lower_right.pyplot(plt)
+lower_right.image(wordcloud.to_array(), use_column_width="auto")
