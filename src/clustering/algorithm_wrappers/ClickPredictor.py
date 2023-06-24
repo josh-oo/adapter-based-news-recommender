@@ -32,7 +32,7 @@ class ClickPredictor():
     self.user_embedding_path = "personal_user_embedding.pt"
     
     personal_user_embedding = torch.ones(1, self.model.config.embedding_size).normal_(mean=0.0, std=self.model.config.initializer_range)
-    if os.path.exists(self.user_embedding_path)
+    if os.path.exists(self.user_embedding_path):
         personal_user_embedding = torch.load(self.user_embedding_path)
     else:
         torch.save(personal_user_embedding, self.user_embedding_path)
@@ -42,7 +42,7 @@ class ClickPredictor():
         
     #online learning hyperparameter
     learning_rate = 1e-2 / 4
-    self.optim = torch.optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=0.1)
+    self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=0.1)
     self.positive_training_sample_path = "training_samples_positive.txt"
     self.negative_training_sample_path = "training_samples_negative.txt"
         
@@ -65,54 +65,54 @@ class ClickPredictor():
     current_word = ""
     current_value = 0
     for i,token in enumerate(tokens):
-    if token in self.tokenizer.special_tokens_map.values():
-      continue
-    if not token.startswith("##") and len(current_word) > 0:
-      all_words.append(current_word)
-      all_values.append(current_value)
-      current_word = ""
-      current_value = 0
-    if token.startswith("##"):
-      token = token.replace("##","",1)
-    current_word += token
-    current_value += values[i].item()
+      if token in self.tokenizer.special_tokens_map.values():
+        continue
+      if not token.startswith("##") and len(current_word) > 0:
+        all_words.append(current_word)
+        all_values.append(current_value)
+        current_word = ""
+        current_value = 0
+      if token.startswith("##"):
+        token = token.replace("##","",1)
+      current_word += token
+      current_value += values[i].item()
     all_words.append(current_word)
     all_values.append(current_value)
 
     return all_words, torch.nn.functional.softmax(torch.tensor(all_values), dim=-1)
 
-def _extract_word_deviations(self, tokens : List[str], non_personal_attentions : torch.FloatTensor, personal_attentions : torch.FloatTensor):
-  """
-  aggregates the attention map (multi-head -> single head) and transforms subword tokens into full words
-  :param
-    tokens : (List[str]) : the list of tokens
-    non_personal_attentions : torch.FloatTensor : the full (last) attention map for the non-personal prediction
-    personal_attentions : torch.FloatTensor : the full (last) attention map for the personal prediction
-  :return
-    word_deviations : dict : a dict containing all words of the input headline and the deviation between personal and non-personal predictions
-  """
-  temperature = 1/12 #1/number_of_heads
+  def _extract_word_deviations(self, tokens : List[str], non_personal_attentions : torch.FloatTensor, personal_attentions : torch.FloatTensor):
+    """
+    aggregates the attention map (multi-head -> single head) and transforms subword tokens into full words
+    :param
+      tokens : (List[str]) : the list of tokens
+      non_personal_attentions : torch.FloatTensor : the full (last) attention map for the non-personal prediction
+      personal_attentions : torch.FloatTensor : the full (last) attention map for the personal prediction
+    :return
+      word_deviations : dict : a dict containing all words of the input headline and the deviation between personal and non-personal predictions
+    """
+    temperature = 1/12 #1/number_of_heads
 
-  #we are only interested in the cls token as it is used in our pooling step
-  cls_attention_personal = personal_attentions[:,0]
-  cls_attention_non_personal = non_personal_attentions[:,0]
+    #we are only interested in the cls token as it is used in our pooling step
+    cls_attention_personal = personal_attentions[:,0]
+    cls_attention_non_personal = non_personal_attentions[:,0]
 
-  #aggregate with log summation (Adapted from: Attention Distillation: self-supervised vision transformer students need more guidance)
-  personal_aggregated = torch.nn.functional.softmax(temperature * cls_attention_personal.log().sum(dim=-2),dim=-1)
-  non_personal_aggregated = torch.nn.functional.softmax(temperature * cls_attention_non_personal.log().sum(dim=-2),dim=-1)
+    #aggregate with log summation (Adapted from: Attention Distillation: self-supervised vision transformer students need more guidance)
+    personal_aggregated = torch.nn.functional.softmax(temperature * cls_attention_personal.log().sum(dim=-2),dim=-1)
+    non_personal_aggregated = torch.nn.functional.softmax(temperature * cls_attention_non_personal.log().sum(dim=-2),dim=-1)
 
-  words_personal, values_personal = self._convert_tokens_to_words(tokens, personal_aggregated)
-  words_non_personal, values_non_personal = self._convert_tokens_to_words(tokens, non_personal_aggregated)
+    words_personal, values_personal = self._convert_tokens_to_words(tokens, personal_aggregated)
+    words_non_personal, values_non_personal = self._convert_tokens_to_words(tokens, non_personal_aggregated)
 
-  deviation = (values_personal - values_non_personal) / values_non_personal
+    deviation = (values_personal - values_non_personal) / values_non_personal
 
-  all_deviations = {}
-  for deviation, word in zip(deviation, words_personal):
-    all_deviations[word] = deviation.item()
+    all_deviations = {}
+    for deviation, word in zip(deviation, words_personal):
+      all_deviations[word] = deviation.item()
 
-  return all_deviations
+    return all_deviations
 
-  def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM"):
+  def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM", compare : bool = True):
     """
     calculate scores for a list of headlines for a given user
     :param
@@ -134,13 +134,13 @@ def _extract_word_deviations(self, tokens : List[str], non_personal_attentions :
       user_index = torch.tensor([self.user_mapping[user_id]])
     inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
     if self.device is not None:
-      inputs = inputs.to(device)
-      user_index = user_index.to(device)
-    model.eval()
+      inputs = inputs.to(self.device)
+      user_index = user_index.to(self.device)
+    self.model.eval()
     with torch.no_grad():
-      personalized_outputs = model(**inputs, users=user_index.unsqueeze(dim=0), output_attentions=compare)
+      personalized_outputs = self.model(**inputs, users=user_index.unsqueeze(dim=0), output_attentions=compare)
       if compare:
-        non_personalized_outputs = model(**inputs, users=None, output_attentions=True)
+        non_personalized_outputs = self.model(**inputs, users=None, output_attentions=True)
 
     personal_probs = torch.nn.functional.softmax(personalized_outputs.logits, dim=-1)
     personal_scores = personal_probs[:,1].detach().numpy()
@@ -159,9 +159,9 @@ def _extract_word_deviations(self, tokens : List[str], non_personal_attentions :
 
       word_deviations = []
       for i, headline in enumerate(inputs['input_ids']):
-        current_tokens = tokenizer.convert_ids_to_tokens(headline)
+        current_tokens = self.tokenizer.convert_ids_to_tokens(headline)
 
-        word_deviations.append(_extract_word_deviations(None, current_tokens,non_personal_attentions[i], personal_attention[i]))
+        word_deviations.append(self._extract_word_deviations(current_tokens,non_personal_attentions[i], personal_attention[i]))
 
     return personal_scores, word_deviations, personal_deviations
 
@@ -184,7 +184,7 @@ def _extract_word_deviations(self, tokens : List[str], non_personal_attentions :
         
     #load all available negative samples
     all_negative_samples = []
-    with open(filename) as f:
+    with open(self.negative_training_sample_path) as f:
         all_negative_samples = [line.rstrip() for line in f]
     num_negative_samples = len(all_negative_samples)
     if num_negative_samples == 0:
@@ -202,7 +202,7 @@ def _extract_word_deviations(self, tokens : List[str], non_personal_attentions :
     #the personal user embedding is saved at the last embedding matrix index
     user_index = torch.tensor([len(self.model.user_embeddings.weight) -1])
     
-    inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
+    inputs = self.tokenizer(list(all_samples), return_tensors="pt", padding='longest')
     
     if self.device is not None:
         inputs = inputs.to(self.device)
@@ -211,24 +211,24 @@ def _extract_word_deviations(self, tokens : List[str], non_personal_attentions :
     
     #freeze everything but the user_embeddings
     
-    for param in model.parameters():
+    for param in self.model.parameters():
         param.requires_grad = False
     
-    for param in model.user_embeddings.parameters():
+    for param in self.model.user_embeddings.parameters():
         param.requires_grad = True
   
   
     #perform online learning update step
-    model.train()
+    self.model.train()
     
-    output = model(**inputs, users=user_index.unsqueeze(dim=0), labels=label)
+    output = self.model(**inputs, users=user_index.unsqueeze(dim=0), labels=label.unsqueeze(dim=0))
     loss = output.loss
     loss.backward()
 
-    optimizer.step()
-    optimizer.zero_grad()
+    self.optimizer.step()
+    self.optimizer.zero_grad()
     
-    model.eval()
+    self.model.eval()
 
     #save updated personal user embedding
     torch.save(self.model.user_embeddings.weight[-1].unsqueeze(dim=0), self.user_embedding_path)
@@ -269,29 +269,30 @@ class RankingModule():
       exploration_rati (float) : the ratio of articles which are used for exploration (in the range of 0.0 and 1.0)
     :return: list of tuples containing the sorted candidate strings, the id and the score for example: [("Lorem ipsum ...", 2, 0.78)]
     """
+    #TODO double check ranking algorithm
     assert len(headlines) > take_top_k
-    assert exploration_ratio > 0.0 and exploration_ratio < 1.0
+    assert exploration_ratio >= 0.0 and exploration_ratio <= 1.0
     assert len(headlines) == len(ids)
     
     scores, _, _ = self.click_predictor.calculate_scores(headlines, user_id)
 
-    headlines_sorted = sorted(headlines, key=scores)
-    ids_sorted =sorted(ids, key=scores)
-    scores_sorted = sorted(scores)
-    headlines_ids_sorted = zip(headlines_sorted, ids_sorted, scores_sorted)
+    headlines_sorted = [x for _, x in sorted(zip(scores, headlines), reverse=True)]
+    ids_sorted =[x for _, x in sorted(zip(scores, ids), reverse=True)]
+    scores_sorted = sorted(scores, reverse=True)
+    headlines_ids_sorted = list(zip(headlines_sorted, ids_sorted, scores_sorted))
 
     k_best = int(take_top_k * (1.0 - exploration_ratio))
 
     similarity_threshold = 0.5
 
     selected_headlines = []
-    while len(selected_headlines) < k_best and len(headlines_ids_sorted) > 0:
+    while len(selected_headlines) < k_best and len(headlines_sorted) > 0:
       candidate, id, score = headlines_ids_sorted.pop(0)
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
-      for item in selected_headline:
-        scores = self.similarity_scorer.score(candidate, item)
+      for item, _, _ in selected_headlines:
+        scores = self.similarity_scorer.score(candidate, item)['rougeL'].fmeasure
         if scores > similarity_threshold:
           similar_headline_already_selected = True
           break
@@ -308,8 +309,8 @@ class RankingModule():
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
-      for item in selected_headline:
-        scores = self.similarity_scorer.score(candidate, item)
+      for item, _, _ in selected_headlines:
+        scores = self.similarity_scorer.score(candidate, item)['rougeL'].fmeasure
         if scores > similarity_threshold:
           similar_headline_already_selected = True
           break
