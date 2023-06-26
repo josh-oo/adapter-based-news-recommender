@@ -154,7 +154,7 @@ class ClusteringAlg:
                     go.Scatter3d(x=[point[0]], y=[point[1]], z=[point[2]],
                                  marker_symbol=['diamond'],
                                  marker=dict(
-                                     size=5),
+                                     size=3),
                                  mode='markers', name=label)
                                  # marker_color=[self.predict(user)]) # todo
                 )

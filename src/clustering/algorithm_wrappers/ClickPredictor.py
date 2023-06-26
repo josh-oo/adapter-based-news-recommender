@@ -238,13 +238,13 @@ class ClickPredictor():
     """
     :return: all embeddings in the shape (embedding_dim, total_number_of_users)
     """
-    return self.model.user_embeddings.weight[:-1].numpy()
+    return self.model.user_embeddings.weight[:-1].detach().numpy()
 
   def get_personal_user_embedding(self):
     """
     :return: personlized embedding in the shape (embedding_dim, 1)
     """
-    return self.model.user_embeddings.weight[-1].numpy()
+    return self.model.user_embeddings.weight[-1].detach().numpy()
 
 
 
@@ -304,8 +304,11 @@ class RankingModule():
     headlines_ids_sorted = reversed(headlines_ids_sorted)
 
     #fill the remaining space with exploration headlines
-    while len(selected_headlines) < take_top_k and len(headlines_ids_sorted) > 0:
-      candidate, id, score = headlines_ids_sorted.pop(0)
+    while len(selected_headlines) < take_top_k:
+      try:
+        candidate, id, score = headlines_ids_sorted.pop(0)
+      except Exception:
+        break
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False

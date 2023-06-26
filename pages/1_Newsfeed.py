@@ -30,11 +30,24 @@ add_selectbox = st.sidebar.selectbox(
 )
 
 ### DATA LOADING ###
+click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
+ranking_module = RankingModule(click_predictor)
 
-user_red, user_test_red = load_preprocess_data()
+embedding_path = st.session_state['config']['DATA']['UserEmbeddingPath']
+test_path = st.session_state['config']['DATA']['TestUserEmbeddingPath']
+user_embedding = click_predictor.get_historic_user_embeddings()
+# test_embedding = load_data(test_path)
+# standardize data
+scaler = fit_standardizer(user_embedding)
+user_embedding = standardize_data(scaler, user_embedding)
+# test_embedding = standardize_data(scaler, test_embedding)
+# transform data
+reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
+user_red = umap_transform(reducer, user_embedding)
+# user_test_red = umap_transform(reducer, test_embedding)
 
 if 'user' not in st.session_state:
-    st.session_state['user'] = user_test_red[3]  # todo replace
+    st.session_state['user'] = user_red[3]  # todo replace
 
 if 'user_old' not in st.session_state:
     st.session_state['user_old'] = st.session_state['user']
@@ -49,37 +62,44 @@ left_column, right_column = st.columns(2)
 left_column.header('Newsfeed')
 left_column.write("Below, you see your personalized newsfeed.")
 
-click_predictor = ClickPredictor("test")  # todo
-ranking_module = RankingModule(click_predictor)
 
 headlines = load_headlines(config['DATA'])
 unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
 unread_headlines = list(headlines[st.session_state.article_mask])
 article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines)
 
-
+import time
 def button_callback(button_index, article_index, headline):
+    start = time.time()
     # set article  and all previous as read
-    st.session_state.article_mask[article_recommendations[0][:button_index + 1]] = False
+    for (unread_headline, i, s) in article_recommendations[:button_index]:
+        st.session_state.article_mask[i] = False
+        click_predictor.update_step(unread_headline, 0)
 
     # give postive feedback for clicked headline
+    st.session_state.article_mask[article_index] = False
     click_predictor.update_step(headline, 1)
     # all previous non clicked articles are considered negative update steps
-    for unread_article in article_recommendations[1][:button_index]:
-        click_predictor.update_step(unread_article, 0)
-
     # update user states
-    # todo replace
-    # st.session_state.user = click_predictor.get_personal_user_embedding()
     st.session_state.user_old = st.session_state.user
-    st.session_state.user = user_test_red[article_index]
+
+    print(f"Update: {time.time()-start}")
+    user = click_predictor.get_personal_user_embedding().reshape(1, -1)
+    print(f"Replace: {time.time()-start}")
+    user_std = standardize_data(scaler, user)
+    print(f"Standardize: {time.time()-start}")
+
+    user_rd = umap_transform(reducer, user_std)
+    print(f"Transform: {time.time()-start}")
+
+    st.session_state.user = user_rd[0]
 
 
 article_fields = [left_column.button(article, use_container_width=True,
                                      on_click=button_callback,
                                      args=(button_index, article_index, article))
-                  for button_index, (article_index, article) in
-                  enumerate(zip(article_recommendations[0], article_recommendations[1]))]  # sorry for ugly
+                  for button_index, (article, article_index, score) in
+                  enumerate(article_recommendations)]  # sorry for ugly
 
 ### 2. CLUSTERING ####
 right_column.header('Clustering')
