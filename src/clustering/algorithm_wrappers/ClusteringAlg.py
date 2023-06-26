@@ -47,7 +47,7 @@ class ClusteringAlg:
                 return location
         raise Exception("Matching label not found")
 
-    def extract_representations(self, X=None, mode='medoid'):
+    def extract_representations(self, X, mode='medoid'):
         """
         Calculates the representats for each cluster using the model stored at self.model.
         This can occur in two ways:
@@ -63,6 +63,8 @@ class ClusteringAlg:
             self.representants = self.medoids(X)
         else:
             raise Exception("Not a valid mode")
+
+        self.repr_indeces = [np.nonzero(np.all(X==repr,axis=1))[0][0] for repr in self.representants[1]]
 
 
     def centroids(self, X):
@@ -118,7 +120,7 @@ class ClusteringAlg:
         if id > len(self.representants[0]):
             raise ValueError
         labels, locations = self.representants
-        return labels[id], locations[id]
+        return locations[id], self.repr_indeces[id]
 
     def visualize(self, data, labels, points=None) -> go:
         #TODO: plot colour also
@@ -156,25 +158,6 @@ class ClusteringAlg:
                                  mode='markers', name=label)
                                  # marker_color=[self.predict(user)]) # todo
                 )
-
-            # if user is not None:
-            #     fig.add_trace(
-            #         go.Scatter3d(x=[user[0]], y=[user[1]], z=[user[2]],
-            #                      marker_symbol=['diamond'],
-            #                      marker=dict(
-            #                          size=5),
-            #                      mode='markers', name="User")
-            #                      # marker_color=[self.predict(user)]) # todo
-            #     )
-            # if representant is not None:
-            #     fig.add_trace(
-            #         go.Scatter3d(x=[representant[0]], y=[representant[1]], z=[representant[2]],
-            #                      marker_symbol=['diamond'],
-            #                      marker=dict(
-            #                          size=5),
-            #                      mode='markers', name="Suggestion")
-            #                      # marker_color=[self.predict(user)])) #todo
-            #     )
         else:
             raise ValueError
         self.figure = fig

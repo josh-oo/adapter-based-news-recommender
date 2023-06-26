@@ -1,10 +1,17 @@
 ![header.png](media/header.png)
 # 04 Continous User Feedback
+## Streamlit App
+Install pip environment via `pip install -r requirements.txt`
+
+Run with 
+`streamlit run Start.py` from root directory.
+
+### Structure
+The directory `pages/` holds the streamlit subpages in the order in which they are shown in the interface. 
+`Start.py` is the starting point of the whole app. 
+
 ## Clustering
 ### Environment
-The file 'clustering_requirements.txt' may be used to create an environment using:
- `$ conda create --name <env> --file clustering_requirements.txt`
-
 The file 'config.ini' contains all constants used throughout the system. In order to avoid spread of information, best
 add new constants to this file, as well as parameterization of methods etc. Usage:
 
