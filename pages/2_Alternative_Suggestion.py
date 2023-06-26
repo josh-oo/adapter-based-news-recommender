@@ -6,8 +6,8 @@ from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.utils import fit_reducer, umap_transform
 
 from src.utils import load_headlines, \
-    generate_wordcloud, get_mind_id_from_index, generate_header, load_preprocess_data, fit_standardizer, \
-    standardize_data
+    get_mind_id_from_index, generate_header, load_preprocess_data, fit_standardizer, \
+    standardize_data, generate_wordcloud_category
 
 ### GENERAL PAGE INFO ###
 st.set_page_config(
@@ -94,7 +94,7 @@ model.visualize(user_red, [("Actual you", st.session_state.user), ("Feed you are
 right_column.plotly_chart(model.figure)
 
 # todo these can be precaclulated
-wordcloud = generate_wordcloud(config, model.labels, number)
+wordcloud = generate_wordcloud_category(config, model.labels, number)
 
 # Display the generated image:
 plt.imshow(wordcloud, interpolation='bilinear')

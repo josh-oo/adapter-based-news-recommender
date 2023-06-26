@@ -9,7 +9,7 @@ from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
 import matplotlib.pyplot as plt
 from src.utils import fit_standardizer, standardize_data, load_data, load_headlines, \
-    generate_wordcloud, generate_header, load_preprocess_data
+    generate_header, load_preprocess_data, generate_wordcloud_category, generate_wordcloud_deviation
 
 ### GENERAL PAGE INFO ###
 
@@ -125,8 +125,17 @@ model.visualize(user_red, [("You", st.session_state.user), ("Previous position",
 right_column.plotly_chart(model.figure)
 
 # ### 2.2. INTERPRETING ###
+#todo what to pass
+scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines))
 
-wordcloud = generate_wordcloud(config, model.labels, prediction)
+#todo how to merge
+from collections import Counter
+c_word_deviations = Counter()
+# todo speed up
+for headline_counter in word_deviations:
+    c_word_deviations += Counter(headline_counter)
+# wordcloud = generate_wordcloud_category(model.labels, prediction)
+wordcloud = generate_wordcloud_deviation(c_word_deviations)
 
 # Display the generated image:
 plt.imshow(wordcloud, interpolation='bilinear')
