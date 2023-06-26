@@ -1,21 +1,16 @@
 import configparser
+from wordcloud import WordCloud
+import numpy as np
 import streamlit as st
-
-from src.utils import generate_header
-
-### GENERAL PAGE INFO ###
 
 st.set_page_config(
     page_title="badpun - Choose profile",
     layout="wide"
 )
 
-generate_header()
-
-config = configparser.ConfigParser()
-config.read('config.ini')
-if 'config' not in st.session_state:
-    st.session_state['config'] = config
+l_small, l_right = st.columns([1, 2])
+l_small.image('media/logo.png')
+l_right.title('Balanced Article Discovery through Playful User Nudging')
 
 ### COLD START ###
 
