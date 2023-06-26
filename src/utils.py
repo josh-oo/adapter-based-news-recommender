@@ -51,6 +51,7 @@ def get_mind_id_from_index(id):
 
 
 def generate_wordcloud_category(labels, cluster_id):
+    # todo @Mara
     # Opening JSON file
     user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
     user_category_frequ = load_normalized_category_frequencies(st.session_state.config['DATA']['UserCategoriesPath'],
@@ -67,6 +68,7 @@ def generate_wordcloud_category(labels, cluster_id):
         .generate_from_frequencies(freq)
 
 def generate_wordcloud_deviation(word_dict):
+    # todo @Mara
     return WordCloud(width=800, height=600,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
