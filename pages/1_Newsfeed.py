@@ -36,24 +36,20 @@ add_selectbox = st.sidebar.selectbox(
 click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
 ranking_module = RankingModule(click_predictor)
 
-# embedding_path = st.session_state['config']['DATA']['UserEmbeddingPath']
-# test_path = st.session_state['config']['DATA']['TestUserEmbeddingPath']
 user_embedding = click_predictor.get_historic_user_embeddings()
-# test_embedding = load_data(test_path)
 # standardize data
 scaler = fit_standardizer(user_embedding)
 user_embedding = standardize_data(scaler, user_embedding)
-# test_embedding = standardize_data(scaler, test_embedding)
 # transform data
 reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
 user_red = umap_transform(reducer, user_embedding)
-# user_test_red = umap_transform(reducer, test_embedding)
+
+if 'cold_start' not in st.session_state:
+    st.session_state['cold_start'] = user_red[3]
 
 if 'user' not in st.session_state:
-    st.session_state['user'] = user_red[3]  # todo replace
+    st.session_state['user'] = st.session_state['cold_start']  # todo replace
 
-if 'user_old' not in st.session_state:
-    st.session_state['user_old'] = st.session_state['user']
 
 if 'article_mask' not in st.session_state:
     st.session_state['article_mask'] = np.array(
@@ -79,8 +75,6 @@ def handle_article(article_index, headline, read=True):
 
     st.session_state.article_mask[article_index] = False
     click_predictor.update_step(headline, read)
-    # st.session_state.user = click_predictor.get_personal_user_embedding()
-    st.session_state.user_old = st.session_state.user
 
     print(f"Update: {time.time()-start}")
     user = click_predictor.get_personal_user_embedding().reshape(1, -1)
@@ -129,7 +123,7 @@ model.extract_representations(user_red)  # return tuple (clusterid, location)
 prediction = model.predict(st.session_state.user)
 
 lower_left.markdown(f"**You are assigned to cluster** {prediction}")
-model.visualize(user_red, [("You", st.session_state.user), ("Previous position", st.session_state.user_old)])
+model.visualize(user_red, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
 lower_left.plotly_chart(model.figure, use_container_width=True)
 
 # ### 2.2. INTERPRETING ###

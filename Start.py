@@ -34,4 +34,4 @@ users = [['sport'],['politics'], ['lifestyle']]
 # todo plug in when ready
 # for user, button in zip(users, buttons):
 #     if button:
-#         st.session_state.user = user
+#         st.session_state.cold_start = user
