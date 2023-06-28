@@ -135,8 +135,11 @@ scores, word_deviations, personal_deviations = click_predictor.calculate_scores(
 from collections import Counter
 c_word_deviations = Counter()
 # todo speed up
-for headline_counter in word_deviations:
-    c_word_deviations += Counter(headline_counter)
+for i, headline_counter in enumerate(word_deviations):
+    if personal_deviations[i] < 0.05: # todo choose threshold
+        continue
+    sorted_headline = Counter(headline_counter).most_common(3)
+    c_word_deviations += dict(sorted_headline)
 # wordcloud = generate_wordcloud_category(model.labels, prediction)
 wordcloud = generate_wordcloud_deviation(c_word_deviations)
 
