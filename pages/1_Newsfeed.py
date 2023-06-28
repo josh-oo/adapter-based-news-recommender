@@ -87,7 +87,7 @@ news_tinder.button(f"[{headlines.loc[current_index, 1]}] {current_article}", use
 
 
 def read_later():
-    pass # todo
+    st.session_state.article_mask[current_index] = False
 
 
 ll, lr = news_tinder.columns(2, gap='large')
