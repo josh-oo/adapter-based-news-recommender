@@ -1,4 +1,4 @@
-from src.recommendation.CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
+#from src.recommendation.CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
 from transformers import AutoTokenizer
 from typing import List
 import torch
@@ -8,6 +8,7 @@ import json
 import os
 import random
 import numpy as np
+import tempfile
 
 class ClickPredictor():
   def __init__(self, huggingface_url : str, commit_hash : str = None, device : str = None):
@@ -27,6 +28,9 @@ class ClickPredictor():
     user_mapping_file = hf_hub_download(repo_id=huggingface_url, filename="user_mapping.json", revision=commit_hash)
     with open(user_mapping_file) as f:
         self.user_mapping = json.load(f)
+
+    #prepare cache file
+    self.cache_dir = tempfile.TemporaryDirectory()
 
     #append personal embedding to to embedding matrix
     self.user_embedding_path = "personal_user_embedding.pt"
@@ -122,10 +126,18 @@ class ClickPredictor():
       compare : bool : if True -> compare results against non-personalized predictions (needed for wordclouds); if False -> calculate personal scores without comparison
     :return
       scores : (List[float]) : a score for each headline specifying a probability for a click event (1.0 = 100%)
-      word_level_deviations (List[dict]): a list of dicts containing the headlines words and the deviation compared to the unpersonalize net
+      word_level_deviations (List[dict]): a list of dicts containing the headlines words and the deviation compared to the unpersonalized net
       personal_deviations (List[float]) : a list of floats indicating the deviation of the personal click probability compared to the non-personalized net
     """
     assert user_id == "CUSTOM" or user_id in self.user_mapping.keys(), "Given user id is not available"
+
+    all_cached_files = os.listdir(self.cache_dir.name)
+
+    cache_file = user_id + "#" + str(hash(tuple(headlines))) + ".json"
+    if cache_file in all_cached_files:
+      with open(os.path.join(self.cache_dir.name, cache_file)) as f:
+        cached_object = json.load(f)
+        return cached_object['personal_scores'], cached_object['word_deviations'], cached_object['personal_deviations']
 
     #the personal user embedding is saved at the last embedding matrix index
     user_index = torch.tensor([len(self.model.user_embeddings.weight) -1])
@@ -136,26 +148,24 @@ class ClickPredictor():
     if self.device is not None:
       inputs = inputs.to(self.device)
       user_index = user_index.to(self.device)
+
     self.model.eval()
     with torch.no_grad():
-      personalized_outputs = self.model(**inputs, users=user_index.unsqueeze(dim=0), output_attentions=compare)
+      personalized_outputs = self.model(**inputs, users=user_index.unsqueeze(dim=0), output_attentions=True)
+      personal_probs = torch.nn.functional.softmax(personalized_outputs.logits, dim=-1)
+      personal_scores = personal_probs[:,1].detach().numpy()
+      personal_attention = personalized_outputs.attentions[-1].squeeze(dim=0)
       if compare:
         non_personalized_outputs = self.model(**inputs, users=None, output_attentions=True)
-
-    personal_probs = torch.nn.functional.softmax(personalized_outputs.logits, dim=-1)
-    personal_scores = personal_probs[:,1].detach().numpy()
+        non_personal_probs = torch.nn.functional.softmax(non_personalized_outputs.logits, dim=-1)
+        non_personal_scores = non_personal_probs[:,1].detach().numpy()
+        non_personal_attentions = non_personalized_outputs.attentions[-1].squeeze(dim=0)
 
     personal_deviations = None
     word_deviations = None
 
     if compare:
-      non_personal_probs = torch.nn.functional.softmax(non_personalized_outputs.logits, dim=-1)
-      non_personal_scores = non_personal_probs[:,1].detach().numpy()
-
       personal_deviations = np.abs(personal_scores-non_personal_scores)
-
-      personal_attention = personalized_outputs.attentions[-1].squeeze(dim=0)
-      non_personal_attentions = non_personalized_outputs.attentions[-1].squeeze(dim=0)
 
       word_deviations = []
       for i, headline in enumerate(inputs['input_ids']):
@@ -163,7 +173,11 @@ class ClickPredictor():
 
         word_deviations.append(self._extract_word_deviations(current_tokens,non_personal_attentions[i], personal_attention[i]))
 
-    return personal_scores, word_deviations, personal_deviations
+      json_object = json.dumps({'personal_scores':personal_scores.tolist(), 'word_deviations':word_deviations, 'personal_deviations':personal_deviations.tolist()})
+      with open(os.path.join(self.cache_dir.name, cache_file), "w") as outfile:
+        outfile.write(json_object)
+
+    return personal_scores.tolist(), word_deviations, personal_deviations.tolist()
 
   def update_step(self, new_headline : str, new_label : int):
     """
@@ -274,7 +288,7 @@ class RankingModule():
     assert exploration_ratio >= 0.0 and exploration_ratio <= 1.0
     assert len(headlines) == len(ids)
     
-    scores, _, _ = self.click_predictor.calculate_scores(headlines, user_id)
+    scores, _, _ = self.click_predictor.calculate_scores(headlines, user_id, compare=True) #compare is set to True to trigger caching
 
     headlines_sorted = [x for _, x in sorted(zip(scores, headlines), reverse=True)]
     ids_sorted =[x for _, x in sorted(zip(scores, ids), reverse=True)]
