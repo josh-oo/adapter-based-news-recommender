@@ -32,6 +32,16 @@ add_selectbox = st.sidebar.selectbox(
     ('KMeans', 'Agglomerative Clustering', 'OPTICS')
 )
 
+### LAYOUT ###
+left_column, right_column = st.columns(2)
+
+news_tinder = left_column.container()
+
+lower_left, lower_right = st.columns(2)
+
+visualization = lower_left.container()
+interpretation = lower_right.container()
+
 ### DATA LOADING ###
 click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
 ranking_module = RankingModule(click_predictor)
@@ -55,10 +65,9 @@ if 'article_mask' not in st.session_state:
     st.session_state['article_mask'] = np.array(
         [True] * (int(config['DATA']['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
-left_column, right_column = st.columns(2)
 
 ### 1. NEWS RECOMMENDATIONS ###
-left_column.header('Newsfeed')
+news_tinder.header('Newsfeed')
 
 
 headlines = load_headlines(config['DATA'])
@@ -88,7 +97,7 @@ def handle_article(article_index, headline, read=True):
     st.session_state.user = user_rd[0]
 
 
-left_column.button(current_article, use_container_width=True, type="primary",
+news_tinder.button(current_article, use_container_width=True, type="primary",
                    on_click=handle_article, args=(current_index, current_article, True))
 
 
@@ -96,16 +105,15 @@ def read_later():
     pass
 
 
-ll, lr = left_column.columns(2, gap='large')
+ll, lr = news_tinder.columns(2, gap='large')
 ll.button('Maybe later', use_container_width=True, on_click=read_later)
 
 lr.button('Skip', use_container_width=True, on_click=handle_article, args=(current_index, current_article, False))
 
-lower_left, lower_right = st.columns(2)
 
 ### 2. CLUSTERING ####
-lower_left.header('Clustering')
-lower_left.write("Here you can see where you are in comparison to other users, and how your click behaviour "
+visualization.header('Clustering')
+visualization.write("Here you can see where you are in comparison to other users, and how your click behaviour "
                  "influences your position.")
 
 model = None
@@ -122,16 +130,17 @@ model.train(user_red)
 model.extract_representations(user_red)  # return tuple (clusterid, location)
 prediction = model.predict(st.session_state.user)
 
-lower_left.markdown(f"**You are assigned to cluster** {prediction}")
+visualization.markdown(f"**You are assigned to cluster** {prediction}")
 model.visualize(user_red, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
-lower_left.plotly_chart(model.figure, use_container_width=True)
+visualization.plotly_chart(model.figure, use_container_width=True)
 
 # ### 2.2. INTERPRETING ###
-lower_right.header('Interpretation')
+interpretation.header('Interpretation')
 #todo what to pass
 scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines))
 
 from wordcloud import STOPWORDS
+stopwords = STOPWORDS.update(",", ":", "-")
 from collections import Counter
 
 c_word_deviations = Counter()
@@ -146,4 +155,4 @@ for i, headline_counter in enumerate(word_deviations):
 wordcloud = generate_wordcloud_deviation(c_word_deviations)
 
 # Display the generated image:
-lower_right.image(wordcloud.to_array(), use_column_width="auto")
+interpretation.image(wordcloud.to_array(), use_column_width="auto")
