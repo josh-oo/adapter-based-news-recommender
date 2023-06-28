@@ -71,7 +71,7 @@ def button_callback_alternative(article_index, test):
     st.session_state.article_mask[article_index] = False
 
 
-article_fields = [left_column.button(article, use_container_width=True,
+article_fields = [left_column.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                      on_click=button_callback_alternative,
                                      args=(article_index, 0))
                   for button_index, (article, article_index, score) in
