@@ -1,4 +1,4 @@
-from .CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
+from src.recommendation.CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
 from transformers import AutoTokenizer
 from typing import List
 import torch

@@ -1,12 +1,11 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
-from src.clustering.algorithm_wrappers.ClickPredictor import ClickPredictor, RankingModule
+from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.utils import fit_reducer, umap_transform
 
 from src.utils import load_headlines, \
-    get_mind_id_from_index, generate_header, load_preprocess_data, fit_standardizer, \
+    get_mind_id_from_index, generate_header, fit_standardizer, \
     standardize_data, generate_wordcloud_category
 
 ### GENERAL PAGE INFO ###

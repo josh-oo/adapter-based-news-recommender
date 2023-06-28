@@ -1,18 +1,15 @@
-import configparser
 import time
 
-import plotly
 import streamlit as st
 import numpy as np
 
 from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
-from src.clustering.algorithm_wrappers.ClickPredictor import ClickPredictor, RankingModule
+from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
-import matplotlib.pyplot as plt
-from src.utils import fit_standardizer, standardize_data, load_data, load_headlines, \
-    generate_header, load_preprocess_data, generate_wordcloud_category, generate_wordcloud_deviation
+from src.utils import fit_standardizer, standardize_data, load_headlines, \
+    generate_header, generate_wordcloud_deviation
 
 ### GENERAL PAGE INFO ###
 
