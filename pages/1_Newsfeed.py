@@ -131,14 +131,16 @@ lower_right.header('Interpretation')
 #todo what to pass
 scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines))
 
-#todo how to merge
+from wordcloud import STOPWORDS
 from collections import Counter
+
 c_word_deviations = Counter()
 # todo speed up
 for i, headline_counter in enumerate(word_deviations):
     if personal_deviations[i] < 0.05: # todo choose threshold
         continue
     sorted_headline = Counter(headline_counter).most_common(3)
+    sorted_headline = [(w,s) for (w,s) in sorted_headline if w not in STOPWORDS]
     c_word_deviations += dict(sorted_headline)
 # wordcloud = generate_wordcloud_category(model.labels, prediction)
 wordcloud = generate_wordcloud_deviation(c_word_deviations)

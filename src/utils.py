@@ -67,6 +67,7 @@ def generate_wordcloud_category(labels, cluster_id):
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA")\
         .generate_from_frequencies(freq)
 
+
 def generate_wordcloud_deviation(word_dict):
     # todo @Mara
     return WordCloud(width=800, height=600,
