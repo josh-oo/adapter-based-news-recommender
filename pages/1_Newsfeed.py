@@ -9,7 +9,7 @@ from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
 from src.utils import fit_standardizer, standardize_data, load_headlines, \
-    generate_header, generate_wordcloud_deviation, set_session_state
+    generate_header, generate_wordcloud_deviation, set_session_state, get_words_from_attentions
 
 ### GENERAL PAGE INFO ###
 
@@ -87,7 +87,7 @@ news_tinder.button(f"[{headlines.loc[current_index, 1]}] {current_article}", use
 
 
 def read_later():
-    pass
+    pass # todo
 
 
 ll, lr = news_tinder.columns(2, gap='large')
@@ -124,18 +124,7 @@ interpretation.header('Interpretation')
 #todo what to pass
 scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
 
-from wordcloud import STOPWORDS
-stopwords = STOPWORDS.update(",", ":", "-")
-from collections import Counter
-
-c_word_deviations = Counter()
-# todo speed up
-for i, headline_counter in enumerate(word_deviations):
-    if personal_deviations[i] < 0.05: # todo choose threshold
-        continue
-    sorted_headline = Counter(headline_counter).most_common(3)
-    sorted_headline = [(w,s) for (w,s) in sorted_headline if w not in STOPWORDS]
-    c_word_deviations += dict(sorted_headline)
+c_word_deviations = get_words_from_attentions(word_deviations, personal_deviations)
 # wordcloud = generate_wordcloud_category(model.labels, prediction)
 wordcloud = generate_wordcloud_deviation(c_word_deviations)
 

@@ -5,6 +5,8 @@ import pandas as pd
 import streamlit as st
 from sklearn.preprocessing import StandardScaler
 from wordcloud import WordCloud
+from collections import Counter
+from wordcloud import STOPWORDS
 
 from src.clustering.utils import fit_reducer, umap_transform
 
@@ -105,3 +107,16 @@ def set_session_state(emergency_user):
     if 'article_mask' not in st.session_state:
         st.session_state['article_mask'] = np.array(
             [True] * (int(st.session_state.config['DATA']['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
+
+
+def get_words_from_attentions(word_deviations, personal_deviations):
+    STOPWORDS.update(",", ":", "-")
+    c_word_deviations = Counter()
+    # todo speed up
+    for i, headline_counter in enumerate(word_deviations):
+        if personal_deviations[i] < 0.05:  # todo choose threshold
+            continue
+        sorted_headline = Counter(headline_counter).most_common(3)
+        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS]
+        c_word_deviations += dict(sorted_headline)
+    return c_word_deviations
