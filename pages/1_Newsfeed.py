@@ -9,7 +9,7 @@ from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
 from src.utils import fit_standardizer, standardize_data, load_headlines, \
-    generate_header, generate_wordcloud_deviation
+    generate_header, generate_wordcloud_deviation, set_session_state
 
 ### GENERAL PAGE INFO ###
 
@@ -44,24 +44,12 @@ click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", comm
 ranking_module = RankingModule(click_predictor)
 
 user_embedding = click_predictor.get_historic_user_embeddings()
-# standardize data
 scaler = fit_standardizer(user_embedding)
 user_embedding = standardize_data(scaler, user_embedding)
-# transform data
 reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
-user_red = umap_transform(reducer, user_embedding)
+user_embedding = umap_transform(reducer, user_embedding)
 
-if 'cold_start' not in st.session_state:
-    st.session_state['cold_start'] = user_red[3]
-
-if 'user' not in st.session_state:
-    st.session_state['user'] = st.session_state['cold_start']  # todo replace
-
-
-if 'article_mask' not in st.session_state:
-    st.session_state['article_mask'] = np.array(
-        [True] * (int(config['DATA']['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
-
+set_session_state(user_embedding[3]) # todo replace
 
 ### 1. NEWS RECOMMENDATIONS ###
 news_tinder.header('Newsfeed')
@@ -69,7 +57,7 @@ news_tinder.header('Newsfeed')
 
 headlines = load_headlines(config['DATA'])
 unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
-unread_headlines = list(headlines[st.session_state.article_mask])
+unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
 article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines)
 
 current_article = article_recommendations[0][0]
@@ -94,7 +82,7 @@ def handle_article(article_index, headline, read=True):
     st.session_state.user = user_rd[0]
 
 
-news_tinder.button(current_article, use_container_width=True, type="primary",
+news_tinder.button(f"[{headlines.loc[current_index, 1]}] {current_article}", use_container_width=True, type="primary",
                    on_click=handle_article, args=(current_index, current_article, True))
 
 
@@ -123,18 +111,18 @@ elif add_selectbox == 'OPTICS':
 else:
     raise ValueError
 
-model.train(user_red)
-model.extract_representations(user_red)  # return tuple (clusterid, location)
+model.train(user_embedding)
+model.extract_representations(user_embedding)  # return tuple (clusterid, location)
 prediction = model.predict(st.session_state.user)
 
 visualization.markdown(f"**You are assigned to cluster** {prediction}")
-model.visualize(user_red, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
+model.visualize(user_embedding, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
 visualization.plotly_chart(model.figure, use_container_width=True)
 
 # ### 2.2. INTERPRETING ###
 interpretation.header('Interpretation')
 #todo what to pass
-scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines))
+scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
 
 from wordcloud import STOPWORDS
 stopwords = STOPWORDS.update(",", ":", "-")

@@ -28,7 +28,7 @@ def load_data(path):
 def load_headlines(_config):
     # TODO place recommender system here
     headline_path = _config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(_config['NoHeadlines']), 3]
+    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(_config['NoHeadlines']), [1,3]]
 
 
 @st.cache_data
@@ -95,3 +95,13 @@ def load_preprocess_data():
     user_red = umap_transform(reducer, user_embedding)
     user_test_red = umap_transform(reducer, test_embedding)
     return user_red, user_test_red
+
+
+def set_session_state(emergency_user):
+    if 'cold_start' not in st.session_state:
+        st.session_state['cold_start'] = emergency_user
+    if 'user' not in st.session_state:
+        st.session_state['user'] = st.session_state['cold_start']
+    if 'article_mask' not in st.session_state:
+        st.session_state['article_mask'] = np.array(
+            [True] * (int(st.session_state.config['DATA']['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
