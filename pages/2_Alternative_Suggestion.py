@@ -94,5 +94,5 @@ model.visualize(user_red, [("Actual you", st.session_state.user), ("Feed you are
 right_column.plotly_chart(model.figure)
 
 # todo these can be precaclulated
-wordcloud = generate_wordcloud_category(config, model.labels, number)
+wordcloud = generate_wordcloud_category(model.labels, number)
 right_column.image(wordcloud.to_array())

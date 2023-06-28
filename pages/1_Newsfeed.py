@@ -36,8 +36,8 @@ add_selectbox = st.sidebar.selectbox(
 click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
 ranking_module = RankingModule(click_predictor)
 
-embedding_path = st.session_state['config']['DATA']['UserEmbeddingPath']
-test_path = st.session_state['config']['DATA']['TestUserEmbeddingPath']
+# embedding_path = st.session_state['config']['DATA']['UserEmbeddingPath']
+# test_path = st.session_state['config']['DATA']['TestUserEmbeddingPath']
 user_embedding = click_predictor.get_historic_user_embeddings()
 # test_embedding = load_data(test_path)
 # standardize data
@@ -70,8 +70,8 @@ unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
 unread_headlines = list(headlines[st.session_state.article_mask])
 article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines)
 
-current_article = article_recommendations[1][0]
-current_index = article_recommendations[0][0]
+current_article = article_recommendations[0][0]
+current_index = article_recommendations[0][1]
 
 
 def handle_article(article_index, headline, read=True):
