@@ -110,7 +110,7 @@ def set_session_state(emergency_user):
 
 
 def get_words_from_attentions(word_deviations, personal_deviations):
-    STOPWORDS.update(",", ":", "-")
+    STOPWORDS.update(",", ":", "-", "(", ")", "?")
     c_word_deviations = Counter()
     # todo speed up
     for i, headline_counter in enumerate(word_deviations):
