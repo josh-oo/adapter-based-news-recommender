@@ -10,6 +10,9 @@ import random
 import numpy as np
 import tempfile
 
+from src.recommendation.CustomModel import BertConfigAdapters, BertForSequenceClassificationAdapters
+
+
 class ClickPredictor():
   def __init__(self, huggingface_url : str, commit_hash : str = None, device : str = None):
     """
