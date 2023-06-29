@@ -121,11 +121,12 @@ visualization.plotly_chart(model.figure, use_container_width=True)
 
 # ### 2.2. INTERPRETING ###
 interpretation.header('Interpretation')
-#todo what to pass
+
 scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
+personal_deviations = personal_deviations[scores > 0.5]
+word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
 
 c_word_deviations = get_words_from_attentions(word_deviations, personal_deviations)
-# wordcloud = generate_wordcloud_category(model.labels, prediction)
 wordcloud = generate_wordcloud_deviation(c_word_deviations)
 
 # Display the generated image:
