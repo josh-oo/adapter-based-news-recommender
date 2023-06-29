@@ -1,4 +1,4 @@
-#from src.recommendation.CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
+from src.recommendation.CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
 from transformers import AutoTokenizer
 from typing import List
 import torch
@@ -9,9 +9,6 @@ import os
 import random
 import numpy as np
 import tempfile
-
-from src.recommendation.CustomModel import BertConfigAdapters, BertForSequenceClassificationAdapters
-
 
 class ClickPredictor():
   def __init__(self, huggingface_url : str, commit_hash : str = None, device : str = None):
@@ -100,9 +97,8 @@ class ClickPredictor():
     """
     temperature = 1/12 #1/number_of_heads
 
-    #we are only interested in the cls token as it is used in our pooling step
-    cls_attention_personal = personal_attentions[:,0]
-    cls_attention_non_personal = non_personal_attentions[:,0]
+    cls_attention_personal = torch.tensor(personal_attentions)
+    cls_attention_non_personal = torch.tensor(non_personal_attentions)
 
     #aggregate with log summation (Adapted from: Attention Distillation: self-supervised vision transformer students need more guidance)
     personal_aggregated = torch.nn.functional.softmax(temperature * cls_attention_personal.log().sum(dim=-2),dim=-1)
@@ -119,6 +115,54 @@ class ClickPredictor():
 
     return all_deviations
 
+  def _get_score_and_attentions(self, headlines : List[str], user_id : str = "CUSTOM"):
+    """
+    calculates score and attention values for each headline or uses cache if available
+    """
+    all_cached_files = os.listdir(self.cache_dir.name)
+
+    all_scores = [None] * len(headlines)
+    all_attentions = [None] * len(headlines)
+
+    remaining_headlines = []
+    remaining_original_indices = []
+
+    #check for each headline if it is already cached; if yes, load it from cache; else predict scores and attentions using the pytorch model
+    for i, headline in enumerate(headlines):
+      cache_file = user_id + "#" + str(hash(headline)) + ".npz"
+      if cache_file in all_cached_files:
+        data = np.load(os.path.join(self.cache_dir.name, cache_file))
+        all_scores[i] = data['score']
+        all_attentions[i] = data['attentions']
+      else:
+        remaining_headlines.append(headline)
+        remaining_original_indices.append(i)
+
+    if len(remaining_headlines) > 0:
+      inputs = self.tokenizer(remaining_headlines, return_tensors="pt", padding='longest').to(self.model.device)
+      user_index = None
+      if user_id == "CUSTOM":
+        user_index = torch.tensor([len(self.model.user_embeddings.weight) -1], device=self.model.device).unsqueeze(dim=0)
+      elif user_id is not None and user_id != "NONE":
+        user_index = torch.tensor([self.user_mapping[user_id]], device=self.model.device).unsqueeze(dim=0)
+
+      self.model.eval()
+      with torch.no_grad():
+        outputs = self.model(**inputs, users=user_index, output_attentions=True)
+        probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
+        scores = probs[:,1].detach().numpy()
+        attentions = outputs.attentions[-1].squeeze(dim=0)
+
+        for i, score, attention in zip(remaining_original_indices,scores,attentions):
+          all_scores[i] = score.item()
+          #we are only interested in the cls token as it is used in our pooling step
+          all_attentions[i] = attention[:,0].numpy()
+    
+          cache_file = user_id + "#" + str(hash(headlines[i])) + ".npz"
+          np.savez(os.path.join(self.cache_dir.name, cache_file), score=all_scores[i], attentions=all_attentions[i])
+
+    return np.array(all_scores), all_attentions
+
   def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM", compare : bool = True):
     """
     calculate scores for a list of headlines for a given user
@@ -134,53 +178,27 @@ class ClickPredictor():
     """
     assert user_id == "CUSTOM" or user_id in self.user_mapping.keys(), "Given user id is not available"
 
-    all_cached_files = os.listdir(self.cache_dir.name)
-
-    cache_file = user_id + "#" + str(hash(tuple(headlines))) + ".json"
-    if cache_file in all_cached_files:
-      with open(os.path.join(self.cache_dir.name, cache_file)) as f:
-        cached_object = json.load(f)
-        return cached_object['personal_scores'], cached_object['word_deviations'], cached_object['personal_deviations']
-
-    #the personal user embedding is saved at the last embedding matrix index
-    user_index = torch.tensor([len(self.model.user_embeddings.weight) -1])
-
-    if user_id != "CUSTOM":
-      user_index = torch.tensor([self.user_mapping[user_id]])
-    inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
-    if self.device is not None:
-      inputs = inputs.to(self.device)
-      user_index = user_index.to(self.device)
-
-    self.model.eval()
-    with torch.no_grad():
-      personalized_outputs = self.model(**inputs, users=user_index.unsqueeze(dim=0), output_attentions=True)
-      personal_probs = torch.nn.functional.softmax(personalized_outputs.logits, dim=-1)
-      personal_scores = personal_probs[:,1].detach().numpy()
-      personal_attention = personalized_outputs.attentions[-1].squeeze(dim=0)
-      if compare:
-        non_personalized_outputs = self.model(**inputs, users=None, output_attentions=True)
-        non_personal_probs = torch.nn.functional.softmax(non_personalized_outputs.logits, dim=-1)
-        non_personal_scores = non_personal_probs[:,1].detach().numpy()
-        non_personal_attentions = non_personalized_outputs.attentions[-1].squeeze(dim=0)
-
+    personal_scores, personal_attention = self._get_score_and_attentions(headlines,user_id)
+      
     personal_deviations = None
     word_deviations = None
 
     if compare:
-      personal_deviations = np.abs(personal_scores-non_personal_scores)
+      non_personal_scores, non_personal_attentions = self._get_score_and_attentions(headlines,"NONE")
+      personal_deviations = np.abs(np.array(personal_scores)-np.array(non_personal_scores))
 
       word_deviations = []
+      inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
       for i, headline in enumerate(inputs['input_ids']):
         current_tokens = self.tokenizer.convert_ids_to_tokens(headline)
 
         word_deviations.append(self._extract_word_deviations(current_tokens,non_personal_attentions[i], personal_attention[i]))
 
-      json_object = json.dumps({'personal_scores':personal_scores.tolist(), 'word_deviations':word_deviations, 'personal_deviations':personal_deviations.tolist()})
-      with open(os.path.join(self.cache_dir.name, cache_file), "w") as outfile:
-        outfile.write(json_object)
+      #json_object = json.dumps({'personal_scores':personal_scores.tolist(), 'word_deviations':word_deviations, 'personal_deviations':personal_deviations.tolist()})
+      #with open(os.path.join(self.cache_dir.name, cache_file), "w") as outfile:
+      #  outfile.write(json_object)
 
-    return personal_scores.tolist(), word_deviations, personal_deviations.tolist()
+    return personal_scores, word_deviations, personal_deviations
 
   def update_step(self, new_headline : str, new_label : int):
     """
@@ -250,6 +268,12 @@ class ClickPredictor():
     #save updated personal user embedding
     torch.save(self.model.user_embeddings.weight[-1].unsqueeze(dim=0), self.user_embedding_path)
 
+    #delete cached user files as they need to be recalculated
+    all_cached_files = os.listdir(self.cache_dir.name)
+    for cached_file in all_cached_files:
+      if cached_file.startswith("CUSTOM"):
+        os.remove(os.path.join(self.cache_dir.name, cached_file))
+
 
   def get_historic_user_embeddings(self):
     """
@@ -291,7 +315,7 @@ class RankingModule():
     assert exploration_ratio >= 0.0 and exploration_ratio <= 1.0
     assert len(headlines) == len(ids)
     
-    scores, _, _ = self.click_predictor.calculate_scores(headlines, user_id, compare=True) #compare is set to True to trigger caching
+    scores, _, _ = self.click_predictor.calculate_scores(headlines, user_id, compare=False) #compare is set to True to trigger caching
 
     headlines_sorted = [x for _, x in sorted(zip(scores, headlines), reverse=True)]
     ids_sorted =[x for _, x in sorted(zip(scores, ids), reverse=True)]
