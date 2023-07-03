@@ -211,7 +211,7 @@ class ClickPredictor():
     #add sample to file
     path = self.negative_training_sample_path if new_label == 0 else self.positive_training_sample_path
     with open(path, "a") as sample_file:
-        sample_file.write(new_headline)
+        sample_file.write(new_headline + "\n")
 
     #perform online learning step only if we got a new positive sample
     if new_label != 1:
