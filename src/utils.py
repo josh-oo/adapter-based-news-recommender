@@ -124,3 +124,11 @@ def get_words_from_attentions(word_deviations, personal_deviations):
         sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS]
         c_word_deviations += dict(sorted_headline)
     return c_word_deviations
+
+
+def get_wordcloud_from_attention(scores, word_deviations, personal_deviations):
+    personal_deviations = [dev for dev, score in zip(personal_deviations, scores) if score > 0.5]
+    word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
+
+    c_word_deviations = get_words_from_attentions(word_deviations, personal_deviations)
+    return generate_wordcloud_deviation(c_word_deviations)
