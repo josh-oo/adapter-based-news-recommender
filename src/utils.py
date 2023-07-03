@@ -73,11 +73,10 @@ def generate_wordcloud_category(labels, cluster_id):
 
 
 def generate_wordcloud_deviation(word_dict):
-    # todo @Mara
     cloud_mask = np.array(Image.open('media/Wordcloud_Mask.jpg'))
     color_function = get_single_color_func('#3070B3')
-    return WordCloud(width=800, height=600, mask = cloud_mask,
-                     background_color="white", mode="RGBA", contour_width = 0, color_func = color_function) \
+    return WordCloud(scale=3, min_font_size=12, mask = cloud_mask, contour_width = 0, color_func = color_function,
+                     background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
 def generate_header():
@@ -118,11 +117,11 @@ def get_words_from_attentions(word_deviations, personal_deviations):
     c_word_deviations = Counter()
     # todo speed up
     for i, headline_counter in enumerate(word_deviations):
-        if personal_deviations[i] < 0.05:  # todo choose threshold
-            continue
         sorted_headline = Counter(headline_counter).most_common(3)
         sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS]
         c_word_deviations += dict(sorted_headline)
+
+
     return c_word_deviations
 
 
