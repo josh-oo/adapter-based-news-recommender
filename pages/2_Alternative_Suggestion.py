@@ -6,8 +6,7 @@ from src.clustering.utils import fit_reducer, umap_transform
 
 from src.utils import load_headlines, \
     get_mind_id_from_index, generate_header, fit_standardizer, \
-    standardize_data, generate_wordcloud_category, set_session_state, get_words_from_attentions, \
-    generate_wordcloud_deviation
+    standardize_data, set_session_state, get_wordcloud_from_attention
 
 ### GENERAL PAGE INFO ###
 st.set_page_config(
@@ -87,12 +86,10 @@ right_column.plotly_chart(model.figure)
 
 # todo these can be precaclulated
 right_column.header('Interpretation')
-#todo what to pass
-scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id)
 
-c_word_deviations = get_words_from_attentions(word_deviations, personal_deviations)
-# wordcloud = generate_wordcloud_category(model.labels, prediction)
-wordcloud = generate_wordcloud_deviation(c_word_deviations)
+results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id)
+
+wordcloud = get_wordcloud_from_attention(results)
 
 # Display the generated image:
 right_column.image(wordcloud.to_array(), use_column_width="auto")
