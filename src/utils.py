@@ -72,7 +72,7 @@ def generate_wordcloud_category(labels, cluster_id):
 
 def generate_wordcloud_deviation(word_dict):
     # todo @Mara
-    return WordCloud(width=800, height=600,
+    return WordCloud(scale=3, min_font_size=12,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
@@ -114,11 +114,11 @@ def get_words_from_attentions(word_deviations, personal_deviations):
     c_word_deviations = Counter()
     # todo speed up
     for i, headline_counter in enumerate(word_deviations):
-        if personal_deviations[i] < 0.05:  # todo choose threshold
-            continue
         sorted_headline = Counter(headline_counter).most_common(3)
         sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS]
         c_word_deviations += dict(sorted_headline)
+
+
     return c_word_deviations
 
 
