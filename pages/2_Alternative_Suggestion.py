@@ -8,7 +8,7 @@ from src.utils import load_headlines, \
     get_mind_id_from_index, generate_header, fit_standardizer, \
     standardize_data, set_session_state, get_wordcloud_from_attention
     standardize_data, generate_wordcloud_from_user_category, set_session_state, get_words_from_attentions, \
-    generate_wordcloud
+    generate_wordcloud, extract_unread
 
 ### GENERAL PAGE INFO ###
 st.set_page_config(
@@ -63,9 +63,8 @@ id = get_mind_id_from_index(exemplar_index)
 
 
 headlines = load_headlines(config['DATA'])
-unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
-unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
-article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id)
+unread_headlines_ind, unread_headlines = extract_unread(headlines)
+article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=40)[:10]
 
 
 ### 3. Page Layout ###
