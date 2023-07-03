@@ -6,7 +6,7 @@ from src.clustering.utils import fit_reducer, umap_transform
 
 from src.utils import load_headlines, \
     get_mind_id_from_index, generate_header, fit_standardizer, \
-    standardize_data, set_session_state, get_wordcloud_from_attention, extract_unread, remove_old_files
+    standardize_data, set_session_state, get_wordcloud_from_attention
 
 ### GENERAL PAGE INFO ###
 st.set_page_config(
@@ -14,12 +14,11 @@ st.set_page_config(
     layout="wide")
 
 generate_header()
-remove_old_files()
 
 config = st.session_state['config']
 
 ### DATA LOADING ###
-click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="c70d86ab3598c32be9466c5303231f5c6e187a2f")
+click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
 ranking_module = RankingModule(click_predictor)
 
 user_embedding = click_predictor.get_historic_user_embeddings()
@@ -62,8 +61,9 @@ id = get_mind_id_from_index(exemplar_index)
 
 
 headlines = load_headlines(config['DATA'])
-unread_headlines_ind, unread_headlines = extract_unread(headlines)
-article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=40)[:10]
+unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
+unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
+article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id)
 
 
 ### 3. Page Layout ###
@@ -87,6 +87,7 @@ article_fields = [left_column.button(f"[{headlines.loc[article_index, 1]}] {arti
 ### 3.2. INTERPRETING ###
 
 right_column.header('Clustering')
+# todo color whole recommended cluster
 model.visualize(user_embedding, [("Actual you", st.session_state.user), ("Feed you are seeing", exemplar_embedding)])
 right_column.plotly_chart(model.figure)
 
@@ -95,7 +96,7 @@ right_column.header('Interpretation')
 
 results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id)
 
-wordcloud = get_wordcloud_from_attention(*results)
+wordcloud = get_wordcloud_from_attention(results)
 
 # Display the generated image:
 right_column.image(wordcloud.to_array(), use_column_width="auto")
