@@ -46,7 +46,7 @@ def load_normalized_category_frequencies(path, user_mapping):
 
     return user_category_frequ
 
-
+@st.cache_data
 def get_mind_id_from_index(id):
     user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
     return list(user_mapping.keys())[list(user_mapping.values()).index(id)]
@@ -102,14 +102,14 @@ def get_words_from_attentions(word_deviations):
     return c_word_deviations
 
 
+def extract_unread(headlines):
+    unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
+    unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
+    return unread_headlines_ind, unread_headlines
+
 def get_wordcloud_from_attention(scores, word_deviations, personal_deviations):
     personal_deviations = [dev for dev, score in zip(personal_deviations, scores) if score > 0.5]
     word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
 
     c_word_deviations = get_words_from_attentions(word_deviations, personal_deviations)
     return generate_wordcloud_deviation(c_word_deviations)
-
-def extract_unread(_rm, headlines, mask):
-    unread_headlines_ind = np.nonzero(mask)[0]
-    unread_headlines = list(headlines.loc[:, 3][mask])
-    return _rm.rank_headlines(unread_headlines_ind, unread_headlines)

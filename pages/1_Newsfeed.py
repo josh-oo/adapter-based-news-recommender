@@ -56,7 +56,8 @@ news_tinder.header('Newsfeed')
 
 
 headlines = load_headlines(config['DATA'])
-article_recommendations = extract_unread(ranking_module, headlines, st.session_state.article_mask)
+unread_headlines_ind, unread_headlines = extract_unread(headlines)
+article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=40)
 current_article = article_recommendations[0][0]
 current_index = article_recommendations[0][1]
 
