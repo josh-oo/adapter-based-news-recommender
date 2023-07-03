@@ -64,14 +64,17 @@ current_article = article_recommendations[0][0]
 current_index = article_recommendations[0][1]
 
 
-def handle_article(article_index, headline, read=True):
+def handle_article(article_index, headline, read=1):
     start = time.time()
-
+    old = click_predictor.get_personal_user_embedding().reshape(1, -1)
+    # print(f"Before: {click_predictor.get_personal_user_embedding().reshape(1, -1)}")
     st.session_state.article_mask[article_index] = False
+    print(headline)
     click_predictor.update_step(headline, read)
 
     print(f"Update: {time.time()-start}")
     user = click_predictor.get_personal_user_embedding().reshape(1, -1)
+    print(f"Change: {np.linalg.norm(old - user)}")
     print(f"Replace: {time.time()-start}")
     user_std = standardize_data(scaler, user)
     print(f"Standardize: {time.time()-start}")
@@ -83,7 +86,7 @@ def handle_article(article_index, headline, read=True):
 
 
 news_tinder.button(f"[{headlines.loc[current_index, 1]}] {current_article}", use_container_width=True, type="primary",
-                   on_click=handle_article, args=(current_index, current_article, True))
+                   on_click=handle_article, args=(current_index, current_article, 1))
 
 
 def read_later():
@@ -93,7 +96,7 @@ def read_later():
 ll, lr = news_tinder.columns(2, gap='large')
 ll.button('Maybe later', use_container_width=True, on_click=read_later)
 
-lr.button('Skip', use_container_width=True, on_click=handle_article, args=(current_index, current_article, False))
+lr.button('Skip', use_container_width=True, on_click=handle_article, args=(current_index, current_article, 0))
 
 
 ### 2. CLUSTERING ####
@@ -123,7 +126,7 @@ visualization.plotly_chart(model.figure, use_container_width=True)
 interpretation.header('Interpretation')
 
 scores, word_deviations, personal_deviations = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
-personal_deviations = personal_deviations[scores > 0.5]
+personal_deviations = [dev for dev, score in zip(personal_deviations, scores) if score > 0.5]
 word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
 
 c_word_deviations = get_words_from_attentions(word_deviations, personal_deviations)
