@@ -219,8 +219,9 @@ class ClickPredictor():
 
     #load all available negative samples
     all_negative_samples = []
-    with open(self.negative_training_sample_path) as f:
-        all_negative_samples = [line.rstrip() for line in f]
+    if os.path.exists(self.negative_training_sample_path):
+        with open(self.negative_training_sample_path) as f:
+            all_negative_samples = [line.rstrip() for line in f]
     num_negative_samples = len(all_negative_samples)
     if num_negative_samples == 0:
         return
