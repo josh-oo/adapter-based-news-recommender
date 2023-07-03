@@ -66,15 +66,11 @@ current_index = article_recommendations[0][1]
 
 def handle_article(article_index, headline, read=1):
     start = time.time()
-    old = click_predictor.get_personal_user_embedding().reshape(1, -1)
-    # print(f"Before: {click_predictor.get_personal_user_embedding().reshape(1, -1)}")
     st.session_state.article_mask[article_index] = False
-    print(headline)
     click_predictor.update_step(headline, read)
 
     print(f"Update: {time.time()-start}")
     user = click_predictor.get_personal_user_embedding().reshape(1, -1)
-    print(f"Change: {np.linalg.norm(old - user)}")
     print(f"Replace: {time.time()-start}")
     user_std = standardize_data(scaler, user)
     print(f"Standardize: {time.time()-start}")
