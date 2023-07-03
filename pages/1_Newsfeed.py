@@ -132,7 +132,7 @@ interpretation.header('Interpretation')
 
 results = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
 
-wordcloud = get_wordcloud_from_attention(results)
+wordcloud = get_wordcloud_from_attention(*results)
 
 # Display the generated image:
 interpretation.image(wordcloud.to_array(), use_column_width="auto")
