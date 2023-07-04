@@ -108,8 +108,7 @@ def extract_unread(headlines):
     return unread_headlines_ind, unread_headlines
 
 def get_wordcloud_from_attention(scores, word_deviations, personal_deviations):
-    personal_deviations = [dev for dev, score in zip(personal_deviations, scores) if score > 0.5]
     word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
 
-    c_word_deviations = get_words_from_attentions(word_deviations, personal_deviations)
-    return generate_wordcloud_deviation(c_word_deviations)
+    c_word_deviations = get_words_from_attentions(word_deviations)
+    return generate_wordcloud(c_word_deviations)
