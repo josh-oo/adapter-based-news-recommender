@@ -25,6 +25,7 @@ class ClusteringAlg:
         file_path = pathlib.Path(__file__).parent.parent.parent.parent / 'config.ini'
         config.read(file_path)
         self.n_clusters = int(config['Clustering']['NoClusters'])
+        self.dim_of_clustering =  config['Clustering']['Clustering_dim']
         self.config = config
 
     def train(self, data):
@@ -141,7 +142,7 @@ class ClusteringAlg:
                                        marker=dict(size=1),
                                        text=labels,
                                        hoverinfo="text+name",
-                                       marker_color=labels, opacity=0.5, name="Historic Users"))
+                                       marker_color=labels, opacity=1, name="Historic Users"))
             repr = self.representants[1]
             fig.add_trace(go.Scatter3d(x=repr[:,0], y=repr[:,1], z=repr[:,2],
                                        mode='markers',

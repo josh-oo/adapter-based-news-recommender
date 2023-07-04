@@ -2,6 +2,7 @@ import time
 
 import streamlit as st
 import numpy as np
+from sklearn.neighbors import NearestNeighbors
 
 from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
@@ -44,8 +45,7 @@ click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", comm
 ranking_module = RankingModule(click_predictor)
 
 user_embedding = click_predictor.get_historic_user_embeddings()
-scaler = fit_standardizer(user_embedding)
-user_embedding = standardize_data(scaler, user_embedding)
+original_user_embedding = user_embedding
 reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
 user_embedding = umap_transform(reducer, user_embedding)
 
@@ -73,10 +73,13 @@ def handle_article(article_index, headline, read=True):
     print(f"Update: {time.time()-start}")
     user = click_predictor.get_personal_user_embedding().reshape(1, -1)
     print(f"Replace: {time.time()-start}")
-    user_std = standardize_data(scaler, user)
-    print(f"Standardize: {time.time()-start}")
 
-    user_rd = umap_transform(reducer, user_std)
+    nn = NearestNeighbors(n_neighbors=2)
+    nn.fit(original_user_embedding)
+    _ , neighbor = nn.kneighbors(user)
+    neighbor = neighbor[0][1]
+
+    user_rd = user_embedding[neighbor].reshape(1, -1)
     print(f"Transform: {time.time()-start}")
 
     st.session_state.user = user_rd[0]
@@ -111,9 +114,14 @@ elif add_selectbox == 'OPTICS':
 else:
     raise ValueError
 
-model.train(user_embedding)
-model.extract_representations(user_embedding)  # return tuple (clusterid, location)
-prediction = model.predict(st.session_state.user)
+if model.dim_of_clustering == 'low_dim':
+    model.train(user_embedding)
+    model.extract_representations(user_embedding)  # return tuple (clusterid, location)
+    prediction = model.predict(st.session_state.user)
+else:
+    model.train(original_user_embedding)
+    model.extract_representations(original_user_embedding)  # return tuple (clusterid, location)
+    prediction = model.predict(user = click_predictor.get_personal_user_embedding())
 
 visualization.markdown(f"**You are assigned to cluster** {prediction}")
 model.visualize(user_embedding, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])

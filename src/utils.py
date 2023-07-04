@@ -7,6 +7,8 @@ from sklearn.preprocessing import StandardScaler
 from wordcloud import WordCloud
 from collections import Counter
 from wordcloud import STOPWORDS
+from wordcloud import get_single_color_func
+from PIL import Image
 
 from src.clustering.utils import fit_reducer, umap_transform
 
@@ -72,8 +74,10 @@ def generate_wordcloud_category(labels, cluster_id):
 
 def generate_wordcloud_deviation(word_dict):
     # todo @Mara
-    return WordCloud(width=800, height=600,
-                     background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
+    cloud_mask = np.array(Image.open('media/Wordcloud_Mask.jpg'))
+    color_function = get_single_color_func('#3070B3')
+    return WordCloud(width=800, height=600, mask = cloud_mask,
+                     background_color="white", mode="RGBA", contour_width = 0, color_func = color_function) \
         .generate_from_frequencies(word_dict)
 
 def generate_header():
