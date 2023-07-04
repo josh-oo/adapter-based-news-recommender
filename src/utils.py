@@ -84,7 +84,7 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
 
 @st.cache_data
 def generate_wordcloud(word_dict):
-    cloud_mask = np.array(Image.open('media/Wordcloud_Mask.jpg'))
+    cloud_mask = np.array(Image.open(st.session_state['config']['Wordcloud']['MaskPath']))
     color_function = get_single_color_func('#3070B3')
 
     return WordCloud(scale=3, mask = cloud_mask, contour_width = 0, color_func = color_function,
