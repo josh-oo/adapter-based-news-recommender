@@ -1,17 +1,12 @@
+import os
 import time
-
 import streamlit as st
-import numpy as np
-from sklearn.neighbors import NearestNeighbors
-
-from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
-from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
 from src.utils import fit_standardizer, standardize_data, load_headlines, \
     generate_header, set_session_state, extract_unread, \
-    get_wordcloud_from_attention
+    get_wordcloud_from_attention, remove_old_files
 
 ### GENERAL PAGE INFO ###
 
@@ -21,7 +16,7 @@ st.set_page_config(
 )
 
 generate_header()
-
+remove_old_files()
 config = st.session_state.config
 
 ### LAYOUT ###
