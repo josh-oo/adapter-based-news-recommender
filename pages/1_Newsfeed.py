@@ -1,6 +1,10 @@
 import os
 import time
 import streamlit as st
+import numpy as np
+from sklearn.neighbors import NearestNeighbors
+
+from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.utils import umap_transform, fit_reducer
