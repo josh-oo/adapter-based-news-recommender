@@ -6,7 +6,7 @@ from src.clustering.utils import fit_reducer, umap_transform
 
 from src.utils import load_headlines, \
     get_mind_id_from_index, generate_header, fit_standardizer, \
-    standardize_data, set_session_state, get_wordcloud_from_attention, extract_unread
+    standardize_data, set_session_state, get_wordcloud_from_attention, extract_unread, remove_old_files
 
 ### GENERAL PAGE INFO ###
 st.set_page_config(
@@ -14,6 +14,7 @@ st.set_page_config(
     layout="wide")
 
 generate_header()
+remove_old_files()
 
 config = st.session_state['config']
 
