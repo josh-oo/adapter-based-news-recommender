@@ -23,8 +23,8 @@ click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", comm
 ranking_module = RankingModule(click_predictor)
 
 user_embedding = click_predictor.get_historic_user_embeddings()
+original_user_embedding = user_embedding
 scaler = fit_standardizer(user_embedding)
-user_embedding = standardize_data(scaler, user_embedding)
 reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
 user_embedding = umap_transform(reducer, user_embedding)
 
@@ -35,16 +35,23 @@ set_session_state(user_embedding[3]) # todo replace
 
 model = KMeansWrapper()
 
-model.train(user_embedding)
-model.extract_representations(user_embedding)  # return tuple (clusterid, location)
-prediction = model.predict(st.session_state.user)
+if model.dim_of_clustering == 'low_dim':
+    model.train(user_embedding)
+    model.extract_representations(user_embedding)  # return tuple (clusterid, location)
+    prediction = model.predict(st.session_state.user)
+else:
+    model.train(original_user_embedding)
+    model.extract_representations(original_user_embedding)  # return tuple (clusterid, location)
+    #prediction = model.predict(user = click_predictor.get_personal_user_embedding().reshape(1, -1))
+    prediction = model.predict(user = click_predictor.get_personal_user_embedding())
+
 cluster_representant = model.interpret(prediction)
 user_suggestion = model.suggest(cluster_representant, metric=int(config['Clustering']['SuggestionMetric']))
 
 st.write(f"Your actual cluster is {prediction}. We recommend you to have a look at cluster {user_suggestion[0]}, "
          f"which is the feed you see by default. Choose any other "
          f"cluster below.")
-number = st.number_input('Cluster', min_value=0, max_value=int(config['Clustering']['NoClusters']), value=user_suggestion[0])
+number = st.number_input('Cluster', min_value=0, max_value=int(config['Clustering']['NoClusters'])-1, value=user_suggestion[0])
 
 # get represenatnt of cluster chosen by user
 exemplar_embedding, exemplar_index = model.get_cluster_representant(number)

@@ -1,6 +1,4 @@
-import glob
 import json
-import os
 
 import numpy as np
 import pandas as pd
@@ -9,17 +7,10 @@ from sklearn.preprocessing import StandardScaler
 from wordcloud import WordCloud
 from collections import Counter
 from wordcloud import STOPWORDS
+from wordcloud import get_single_color_func
+from PIL import Image
 
-
-def remove_old_files():
-    if 'clean' not in st.session_state:
-        try:
-            os.remove('personal_user_embedding.pt')
-            for f in glob.glob("training_samples_*.txt"):
-                os.remove(f)
-        except OSError:
-            pass
-        st.session_state['clean'] = True
+from src.clustering.utils import fit_reducer, umap_transform
 
 
 @st.cache_data
@@ -41,7 +32,7 @@ def load_data(path):
 def load_headlines(_config):
     # TODO place recommender system here
     headline_path = _config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(_config['NoHeadlines']), [1, 3]]
+    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(_config['NoHeadlines']), [1,3]]
 
 
 @st.cache_data
@@ -58,13 +49,12 @@ def load_normalized_category_frequencies(path, user_mapping):
     return user_category_frequ
 
 
-@st.cache_data
 def get_mind_id_from_index(id):
     user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
     return list(user_mapping.keys())[list(user_mapping.values()).index(id)]
 
 
-def generate_wordcloud_from_user_category(labels, cluster_id):
+def generate_wordcloud_category(labels, cluster_id):
     # todo @Mara
     # Opening JSON file
     user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
@@ -77,21 +67,40 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
     category_freq_current_cluster = user_category_frequ.loc[user_category_frequ['user'].isin(user_ids_current_cluster)]
     freq = category_freq_current_cluster.iloc[:, 2:].sum()
 
-    return generate_wordcloud(freq)
+    return WordCloud(width = 1600,height = 1200,
+                     background_color="rgba(255, 255, 255, 0)", mode="RGBA")\
+        .generate_from_frequencies(freq)
 
 
-@st.cache_data
-def generate_wordcloud(word_dict):
-    return WordCloud(scale=3,
-                     background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
+def generate_wordcloud_deviation(word_dict):
+    # todo @Mara
+    cloud_mask = np.array(Image.open('media/Wordcloud_Mask.jpg'))
+    color_function = get_single_color_func('#3070B3')
+    return WordCloud(width=800, height=600, mask = cloud_mask,
+                     background_color="white", mode="RGBA", contour_width = 0, color_func = color_function) \
         .generate_from_frequencies(word_dict)
-
 
 def generate_header():
     l_small, l_right = st.columns([1, 4])
     l_small.image('media/logo_dark.png', use_column_width='always')
     l_right.title('Balanced Article Discovery')
     l_right.title('through Playful User Nudging')
+
+
+def load_preprocess_data():
+    embedding_path = st.session_state['config']['DATA']['UserEmbeddingPath']
+    test_path = st.session_state['config']['DATA']['TestUserEmbeddingPath']
+    user_embedding = load_data(embedding_path)  # todo get_historic_user_embeddings
+    test_embedding = load_data(test_path)
+    # standardize data
+    scaler = fit_standardizer(user_embedding)
+    user_embedding = standardize_data(scaler, user_embedding)
+    test_embedding = standardize_data(scaler, test_embedding)
+    # transform data
+    reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
+    user_red = umap_transform(reducer, user_embedding)
+    user_test_red = umap_transform(reducer, test_embedding)
+    return user_red, user_test_red
 
 
 def set_session_state(emergency_user):
@@ -101,29 +110,17 @@ def set_session_state(emergency_user):
         st.session_state['user'] = st.session_state['cold_start']
     if 'article_mask' not in st.session_state:
         st.session_state['article_mask'] = np.array(
-            [True] * (int(st.session_state.config['DATA'][
-                              'NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
+            [True] * (int(st.session_state.config['DATA']['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
 
-@st.cache_data
-def preprocess_word_frequencies(word_deviations):
+def get_words_from_attentions(word_deviations, personal_deviations):
+    STOPWORDS.update(",", ":", "-", "(", ")", "?")
     c_word_deviations = Counter()
     # todo speed up
     for i, headline_counter in enumerate(word_deviations):
+        if personal_deviations[i] < 0.05:  # todo choose threshold
+            continue
         sorted_headline = Counter(headline_counter).most_common(3)
-        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS and len(w) >= 3]
+        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS]
         c_word_deviations += dict(sorted_headline)
     return c_word_deviations
-
-
-def extract_unread(headlines):
-    unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
-    unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
-    return unread_headlines_ind, unread_headlines
-
-
-def get_wordcloud_from_attention(scores, word_deviations, personal_deviations):
-    word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
-
-    c_word_deviations = preprocess_word_frequencies(word_deviations)
-    return generate_wordcloud(c_word_deviations)
