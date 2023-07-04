@@ -86,7 +86,8 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
 def generate_wordcloud(word_dict):
     cloud_mask = np.array(Image.open('media/Wordcloud_Mask.jpg'))
     color_function = get_single_color_func('#3070B3')
-    return WordCloud(scale=3, min_font_size=12, mask = cloud_mask, contour_width = 0, color_func = color_function,
+
+    return WordCloud(scale=3, mask = cloud_mask, contour_width = 0, color_func = color_function,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
