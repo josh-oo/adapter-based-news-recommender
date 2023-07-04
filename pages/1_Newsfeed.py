@@ -9,8 +9,9 @@ from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
-from src.utils import load_headlines, \
-    generate_header, set_session_state, extract_unread
+from src.utils import fit_standardizer, standardize_data, load_headlines, \
+    generate_header, set_session_state, extract_unread, \
+    get_wordcloud_from_attention
 
 ### GENERAL PAGE INFO ###
 
