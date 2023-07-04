@@ -30,7 +30,7 @@ add_selectbox = st.sidebar.selectbox(
 )
 
 ### LAYOUT ###
-left_column, right_column = st.columns(2)
+left_column, right_column = st.columns([3,1])
 
 news_tinder = left_column.container()
 
@@ -52,8 +52,6 @@ user_embedding = umap_transform(reducer, user_embedding)
 set_session_state(user_embedding[3]) # todo replace
 
 ### 1. NEWS RECOMMENDATIONS ###
-news_tinder.header('Newsfeed')
-
 
 headlines = load_headlines(config['DATA'])
 unread_headlines_ind, unread_headlines = extract_unread(headlines)
@@ -79,19 +77,18 @@ def handle_article(article_index, headline, read=1):
     st.session_state.user = user_rd[0]
 
 
-news_tinder.button(f"[{headlines.loc[current_index, 1]}] {current_article}", use_container_width=True, type="primary",
-                   on_click=handle_article, args=(current_index, current_article, 1))
+news_tinder.subheader(f"[{headlines.loc[current_index, 1].capitalize()}] :blue[{current_article}]")
 
 
 def read_later():
     st.session_state.article_mask[current_index] = False
 
 
-ll, lr = news_tinder.columns(2, gap='large')
-ll.button('Maybe later', use_container_width=True, on_click=read_later)
+ll, lm, lr = news_tinder.columns(3, gap='large')
 
-lr.button('Skip', use_container_width=True, on_click=handle_article, args=(current_index, current_article, 0))
-
+ll.button('Skip', use_container_width=True, on_click=handle_article, args=(current_index, current_article, 0))
+lm.button('Maybe later', use_container_width=True, on_click=read_later)
+lr.button('Read', use_container_width=True, on_click=handle_article, type="primary", args=(current_index, current_article, 1))
 
 ### 2. CLUSTERING ####
 visualization.header('Clustering')
