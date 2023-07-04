@@ -22,13 +22,6 @@ generate_header()
 
 config = st.session_state.config
 
-#### SIDEBAR ######
-st.sidebar.header('Options')
-add_selectbox = st.sidebar.selectbox(
-    'Choose a clustering algorithm:',
-    ('KMeans', 'Agglomerative Clustering', 'OPTICS')
-)
-
 ### LAYOUT ###
 left_column, right_column = st.columns([3,1])
 
@@ -95,16 +88,7 @@ visualization.header('Clustering')
 visualization.write("Here you can see where you are in comparison to other users, and how your click behaviour "
                  "influences your position.")
 
-model = None
-if add_selectbox == 'KMeans':
-    model = KMeansWrapper()
-elif add_selectbox == 'Agglomerative Clustering':
-    model = AgglomorativeWrapper()
-elif add_selectbox == 'OPTICS':
-    model = OpticsWrapper()
-else:
-    raise ValueError
-
+model = KMeansWrapper()
 model.train(user_embedding)
 model.extract_representations(user_embedding)  # return tuple (clusterid, location)
 prediction = model.predict(st.session_state.user)

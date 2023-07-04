@@ -69,8 +69,7 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
 
 @st.cache_data
 def generate_wordcloud(word_dict):
-    # todo @Mara
-    return WordCloud(scale=3, min_word_length=5,
+    return WordCloud(scale=3,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
@@ -91,13 +90,13 @@ def set_session_state(emergency_user):
             [True] * (int(st.session_state.config['DATA']['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
 @st.cache_data
-def get_words_from_attentions(word_deviations):
+def preprocess_word_frequencies(word_deviations):
     STOPWORDS.update(",", ":", "-", "(", ")", "?")
     c_word_deviations = Counter()
     # todo speed up
     for i, headline_counter in enumerate(word_deviations):
         sorted_headline = Counter(headline_counter).most_common(3)
-        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS]
+        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS and len(w) >= 3]
         c_word_deviations += dict(sorted_headline)
     return c_word_deviations
 
@@ -110,5 +109,5 @@ def extract_unread(headlines):
 def get_wordcloud_from_attention(scores, word_deviations, personal_deviations):
     word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
 
-    c_word_deviations = get_words_from_attentions(word_deviations)
+    c_word_deviations = preprocess_word_frequencies(word_deviations)
     return generate_wordcloud(c_word_deviations)
