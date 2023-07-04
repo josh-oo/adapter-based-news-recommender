@@ -86,7 +86,6 @@ article_fields = [left_column.button(f"[{headlines.loc[article_index, 1]}] {arti
 ### 3.2. INTERPRETING ###
 
 right_column.header('Clustering')
-# todo color whole recommended cluster
 model.visualize(user_embedding, [("Actual you", st.session_state.user), ("Feed you are seeing", exemplar_embedding)])
 right_column.plotly_chart(model.figure)
 
