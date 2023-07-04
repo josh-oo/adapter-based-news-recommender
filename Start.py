@@ -1,7 +1,7 @@
 import configparser
 import streamlit as st
 
-from src.utils import generate_header
+from src.utils import generate_header, remove_old_files
 
 ### GENERAL PAGE INFO ###
 
@@ -11,6 +11,7 @@ st.set_page_config(
 )
 
 generate_header()
+remove_old_files()
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -35,3 +36,5 @@ users = [['sport'],['politics'], ['lifestyle']]
 # for user, button in zip(users, buttons):
 #     if button:
 #         st.session_state.cold_start = user
+
+# todo clean modell files
