@@ -70,7 +70,7 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
 @st.cache_data
 def generate_wordcloud(word_dict):
     # todo @Mara
-    return WordCloud(scale=3, min_font_size=12,
+    return WordCloud(scale=3, min_word_length=3,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
