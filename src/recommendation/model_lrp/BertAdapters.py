@@ -1,7 +1,8 @@
-from .BertLRP import BertLayer, BertAttention, BertSelfAttention
-from .LayersLRP import *
+from .Bert import BertLayer, BertAttention, BertSelfAttention
+from .Layers import *
 import torch
 from typing import Optional
+import math
 
 class BertLayerAdapters(BertLayer):
     def __init__(self, config):

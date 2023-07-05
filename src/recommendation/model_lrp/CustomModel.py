@@ -27,7 +27,7 @@ class BertForSequenceClassificationAdapters(BertPreTrainedModel):
         self.adapter_size = config.hidden_size * 2# + config.intermediate_size
         self.embedding_size = config.embedding_size
 
-        self.user_embeddings = nn.Embedding(config.num_users, self.embedding_size)
+        self.user_embeddings = torch.nn.Embedding(config.num_users, self.embedding_size)
         #add additional projection layer if adapter_size != self.embedding_size
         if self.adapter_size != self.embedding_size:
           self.user_projection = Linear(self.embedding_size, self.adapter_size)
