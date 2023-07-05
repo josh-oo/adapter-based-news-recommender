@@ -67,7 +67,6 @@ def get_mind_id_from_index(id):
 
 
 def generate_wordcloud_from_user_category(labels, cluster_id):
-    # todo @Mara
     # Opening JSON file
     user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
     user_category_frequ = load_normalized_category_frequencies(st.session_state.config['DATA']['UserCategoriesPath'],
@@ -82,7 +81,6 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
     return generate_wordcloud(freq)
 
 
-@st.cache_data
 def generate_wordcloud(word_dict):
     cloud_mask = np.array(Image.open(st.session_state['config']['Wordcloud']['MaskPath']))
     color_function = get_single_color_func('#3070B3')
