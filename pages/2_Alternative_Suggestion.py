@@ -19,7 +19,7 @@ remove_old_files()
 config = st.session_state['config']
 
 ### DATA LOADING ###
-click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
+click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="c70d86ab3598c32be9466c5303231f5c6e187a2f")
 ranking_module = RankingModule(click_predictor)
 
 user_embedding = click_predictor.get_historic_user_embeddings()
