@@ -3,7 +3,7 @@ import time
 import streamlit as st
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-
+from scipy.spatial import KDTree
 from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
@@ -24,7 +24,7 @@ remove_old_files()
 config = st.session_state.config
 
 ### LAYOUT ###
-left_column, right_column = st.columns([3,1])
+left_column, right_column = st.columns([3, 1])
 
 news_tinder = left_column.container()
 
@@ -33,25 +33,30 @@ lower_left, lower_right = st.columns(2)
 visualization = lower_left.container()
 interpretation = lower_right.container()
 
+
 ### DATA LOADING ###
 @st.cache_resource
 def load_predictor():
-    return ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
+    return ClickPredictor(huggingface_url="josh-oo/news-classifier",
+                          commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
 
-click_predictor = load_predictor()
 @st.cache_resource
 def load_rm():
     return RankingModule(click_predictor)
+
+@st.cache_resource
+def load_kdtree():
+    return KDTree(click_predictor.get_historic_user_embeddings())
+
+click_predictor = load_predictor()
 ranking_module = load_rm()
+kdtree = load_kdtree()
 
 user_embedding = click_predictor.get_historic_user_embeddings()
 reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
 user_embedding = umap_transform(reducer, user_embedding)
 
-high_dim_model = NearestNeighbors(n_neighbors=2)
-high_dim_model.fit(click_predictor.get_historic_user_embeddings())
-
-set_session_state(user_embedding[3]) # todo replace
+set_session_state(user_embedding[3])  # todo replace
 
 ### 1. NEWS RECOMMENDATIONS ###
 
@@ -67,15 +72,15 @@ def handle_article(article_index, headline, read=1):
     st.session_state.article_mask[article_index] = False
     click_predictor.update_step(headline, read)
 
-    print(f"Update: {time.time()-start}")
+    print(f"Update: {time.time() - start}")
     user = click_predictor.get_personal_user_embedding().reshape(1, -1)
-    print(f"Replace: {time.time()-start}")
+    print(f"Replace: {time.time() - start}")
 
-    _ , neighbor = high_dim_model.kneighbors(user)
-    neighbor = neighbor[0][1]
+    # todo is this ok?
+    _, neighbor = kdtree.query(user)
 
-    user_rd = user_embedding[neighbor]
-    print(f"Transform: {time.time()-start}")
+    user_rd = user_embedding[neighbor].reshape(1, -1)
+    print(f"Transform: {time.time() - start}")
 
     st.session_state.user = user_rd[0]
 
@@ -91,23 +96,26 @@ ll, lm, lr = news_tinder.columns(3, gap='large')
 
 ll.button('Skip', use_container_width=True, on_click=handle_article, args=(current_index, current_article, 0))
 lm.button('Maybe later', use_container_width=True, on_click=read_later)
-lr.button('Read', use_container_width=True, on_click=handle_article, type="primary", args=(current_index, current_article, 1))
+lr.button('Read', use_container_width=True, on_click=handle_article, type="primary",
+          args=(current_index, current_article, 1))
 
 ### 2. CLUSTERING ####
 visualization.header('Clustering')
 visualization.write("Here you can see where you are in comparison to other users, and how your click behaviour "
-                 "influences your position.")
+                    "influences your position.")
 
 model = KMeansWrapper()
 
-if model.dim_of_clustering == 'low_dim':
+if config['Clustering']['Dimensionality'] == 'low':
     model.train(user_embedding)
     model.extract_representations(user_embedding)  # return tuple (clusterid, location)
     prediction = model.predict(st.session_state.user)
-else:
+elif config['Clustering']['Dimensionality'] == 'high':
     model.train(click_predictor.get_historic_user_embeddings())
     model.extract_representations(click_predictor.get_historic_user_embeddings())  # return tuple (clusterid, location)
-    prediction = model.predict(user = click_predictor.get_personal_user_embedding())
+    prediction = model.predict(user=click_predictor.get_personal_user_embedding())
+else:
+    raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
 
 visualization.markdown(f"**You are assigned to cluster** {prediction}")
 model.visualize(user_embedding, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
