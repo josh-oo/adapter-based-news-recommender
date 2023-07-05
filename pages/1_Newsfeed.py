@@ -38,9 +38,11 @@ click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", comm
 ranking_module = RankingModule(click_predictor)
 
 user_embedding = click_predictor.get_historic_user_embeddings()
-original_user_embedding = user_embedding
 reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
 user_embedding = umap_transform(reducer, user_embedding)
+
+high_dim_model = NearestNeighbors(n_neighbors=2)
+high_dim_model.fit(click_predictor.get_historic_user_embeddings())
 
 set_session_state(user_embedding[3]) # todo replace
 
@@ -62,8 +64,6 @@ def handle_article(article_index, headline, read=1):
     user = click_predictor.get_personal_user_embedding().reshape(1, -1)
     print(f"Replace: {time.time()-start}")
 
-    nn = NearestNeighbors(n_neighbors=2)
-    nn.fit(original_user_embedding)
     _ , neighbor = nn.kneighbors(user)
     neighbor = neighbor[0][1]
 
@@ -98,8 +98,8 @@ if model.dim_of_clustering == 'low_dim':
     model.extract_representations(user_embedding)  # return tuple (clusterid, location)
     prediction = model.predict(st.session_state.user)
 else:
-    model.train(original_user_embedding)
-    model.extract_representations(original_user_embedding)  # return tuple (clusterid, location)
+    model.train(click_predictor.get_historic_user_embeddings())
+    model.extract_representations(click_predictor.get_historic_user_embeddings())  # return tuple (clusterid, location)
     prediction = model.predict(user = click_predictor.get_personal_user_embedding())
 
 visualization.markdown(f"**You are assigned to cluster** {prediction}")
