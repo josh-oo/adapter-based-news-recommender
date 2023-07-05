@@ -34,8 +34,15 @@ visualization = lower_left.container()
 interpretation = lower_right.container()
 
 ### DATA LOADING ###
-click_predictor = ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
-ranking_module = RankingModule(click_predictor)
+@st.cache_resource
+def load_predictor():
+    return ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
+
+click_predictor = load_predictor()
+@st.cache_resource
+def load_rm():
+    return RankingModule(click_predictor)
+ranking_module = load_rm()
 
 user_embedding = click_predictor.get_historic_user_embeddings()
 reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
@@ -64,10 +71,10 @@ def handle_article(article_index, headline, read=1):
     user = click_predictor.get_personal_user_embedding().reshape(1, -1)
     print(f"Replace: {time.time()-start}")
 
-    _ , neighbor = nn.kneighbors(user)
+    _ , neighbor = high_dim_model.kneighbors(user)
     neighbor = neighbor[0][1]
 
-    user_rd = user_embedding[neighbor].reshape(1, -1)
+    user_rd = user_embedding[neighbor]
     print(f"Transform: {time.time()-start}")
 
     st.session_state.user = user_rd[0]
