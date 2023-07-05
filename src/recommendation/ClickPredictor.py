@@ -1,4 +1,4 @@
-from src.recommendation.CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
+from src.recommendation.model_lrp.CustomModel import BertForSequenceClassificationAdapters, BertConfigAdapters
 from transformers import AutoTokenizer
 from typing import List
 import torch
@@ -16,7 +16,7 @@ class ClickPredictor():
     load model from remote if not already present on disk. once the data is downloaded it is cached on your disk
     :param
       huggingface_url (str) : url pointing to the huggingface repository for example "josh-oo/news-classifier"
-      commit_has (str) : the corresponding hash if you want to use a certain version for example "1b0922bb88f293e7d16920e7ef583d05933935a9"
+      commit_has (str) : the corresponding hash if you want to use a certain version for example "c70d86ab3598c32be9466c5303231f5c6e187a2f"
       device (str) : if you want to execute it on a certain device for example "cpu" or "cuda"
     """
     config = BertConfigAdapters.from_pretrained(huggingface_url, revision=commit_hash)
@@ -54,7 +54,7 @@ class ClickPredictor():
     if self.device is not None:
       self.model.to(device)
 
-  def _convert_tokens_to_words(self, tokens : List[str], values : torch.FloatTensor):
+  def _convert_tokens_to_words(self, tokens : List[str], values : List[float]):
     """
     converts subword tokens to words and removes special tokens
     :param
@@ -64,65 +64,96 @@ class ClickPredictor():
       words : (List[str]) : a list containing all merged words
       values :  torch.FloatTensor: the modified attention map
     """
+
     all_words = []
     all_values = []
     current_word = ""
     current_value = 0
+    current_counter = 0
     for i,token in enumerate(tokens):
       if token in self.tokenizer.special_tokens_map.values():
         continue
       if not token.startswith("##") and len(current_word) > 0:
         all_words.append(current_word)
-        all_values.append(current_value)
+        all_values.append(current_value / current_counter)
         current_word = ""
         current_value = 0
+        current_counter = 0
       if token.startswith("##"):
         token = token.replace("##","",1)
       current_word += token
       current_value += values[i].item()
+      current_counter += 1
     all_words.append(current_word)
-    all_values.append(current_value)
+    all_values.append(current_value / current_counter)
 
-    return all_words, torch.nn.functional.softmax(torch.tensor(all_values), dim=-1)
+    all_values = (np.array(all_values) - min(all_values)) / (max(all_values) - min(all_values))
 
-  def _extract_word_deviations(self, tokens : List[str], non_personal_attentions : torch.FloatTensor, personal_attentions : torch.FloatTensor):
-    """
-    aggregates the attention map (multi-head -> single head) and transforms subword tokens into full words
-    :param
-      tokens : (List[str]) : the list of tokens
-      non_personal_attentions : torch.FloatTensor : the full (last) attention map for the non-personal prediction
-      personal_attentions : torch.FloatTensor : the full (last) attention map for the personal prediction
-    :return
-      word_deviations : dict : a dict containing all words of the input headline and the deviation between personal and non-personal predictions
-    """
-    temperature = 1/12 #1/number_of_heads
+    return all_words, all_values
+    
+  #adapted from https://github.com/hila-chefer/Transformer-Explainability/tree/main/BERT_explainability/modules/BERT
+  def _generate_lrp(self, output, summed_attention_mask, start_layer=5):
 
-    cls_attention_personal = torch.tensor(personal_attentions)
-    cls_attention_non_personal = torch.tensor(non_personal_attentions)
+    # compute rollout between attention layers
+    def compute_rollout_attention(all_layer_matrices, start_layer=0):
+        # adding residual consideration- code adapted from https://github.com/samiraabnar/attention_flow
+        num_tokens = all_layer_matrices[0].shape[1]
+        batch_size = all_layer_matrices[0].shape[0]
+        eye = torch.eye(num_tokens).expand(batch_size, num_tokens, num_tokens).to(all_layer_matrices[0].device)
+        all_layer_matrices = [all_layer_matrices[i] + eye for i in range(len(all_layer_matrices))]
+        matrices_aug = [all_layer_matrices[i] / all_layer_matrices[i].sum(dim=-1, keepdim=True)
+                              for i in range(len(all_layer_matrices))]
+        joint_attention = matrices_aug[start_layer]
+        for i in range(start_layer+1, len(matrices_aug)):
+            joint_attention = matrices_aug[i].bmm(joint_attention)
+        return joint_attention
+    
+    predictions = torch.argmax(output, axis=-1).detach()
 
-    #aggregate with log summation (Adapted from: Attention Distillation: self-supervised vision transformer students need more guidance)
-    personal_aggregated = torch.nn.functional.softmax(temperature * cls_attention_personal.log().sum(dim=-2),dim=-1)
-    non_personal_aggregated = torch.nn.functional.softmax(temperature * cls_attention_non_personal.log().sum(dim=-2),dim=-1)
+    one_hot_vector = torch.nn.functional.one_hot(predictions, num_classes=2).float()
+    one_hot = one_hot_vector.clone().detach().requires_grad_(True)
+    one_hot = torch.sum(one_hot * output)
 
-    words_personal, values_personal = self._convert_tokens_to_words(tokens, personal_aggregated)
-    words_non_personal, values_non_personal = self._convert_tokens_to_words(tokens, non_personal_aggregated)
+    self.model.zero_grad()
+    one_hot.backward(retain_graph=True)
 
-    deviation = (values_personal - values_non_personal) / values_non_personal
+    kwargs = {"alpha": 1}
+    self.model.relprop(one_hot_vector, **kwargs)
 
-    all_deviations = {}
-    for deviation, word in zip(deviation, words_personal):
-      all_deviations[word] = deviation.item()
+    cams = []
+    blocks = self.model.bert.encoder.layer
+    for i in range(0, output.shape[0]):
+      current_cams = []
+      for blk in blocks:
+        grad = blk.attention.self.get_attn_gradients()
+        cam = blk.attention.self.get_attn_cam()
+        cam = cam[i].reshape(-1, cam.shape[-1], cam.shape[-1])
+        grad = grad[i].reshape(-1, grad.shape[-1], grad.shape[-1])
+        cam = grad * cam
+        cam = cam.clamp(min=0).mean(dim=0)
+        current_cams.append(cam.unsqueeze(0).detach())
+      cams.append(current_cams)
 
-    return all_deviations
+    results = []
+    for i in range(0, output.shape[0]):
+      rollout = compute_rollout_attention(cams[i], start_layer=start_layer)
 
-  def _get_score_and_attentions(self, headlines : List[str], user_id : str = "CUSTOM"):
+      #set cls score to zero
+      rollout[:, 0, 0] = rollout[:, 0].min()
+      #set sep score to zero
+      rollout[:, 0, summed_attention_mask[i]-1] = rollout[:, 0].min()
+      results.append(rollout[:, 0])
+      
+    return results
+
+  def _get_score_and_relevancies(self, headlines : List[str], user_id : str = "CUSTOM"):
     """
     calculates score and attention values for each headline or uses cache if available
     """
     all_cached_files = os.listdir(self.cache_dir.name)
 
     all_scores = [None] * len(headlines)
-    all_attentions = [None] * len(headlines)
+    all_relevancies = [None] * len(headlines)
 
     remaining_headlines = []
     remaining_original_indices = []
@@ -130,10 +161,11 @@ class ClickPredictor():
     #check for each headline if it is already cached; if yes, load it from cache; else predict scores and attentions using the pytorch model
     for i, headline in enumerate(headlines):
       cache_file = user_id + "#" + str(hash(headline)) + ".npz"
+
       if cache_file in all_cached_files:
         data = np.load(os.path.join(self.cache_dir.name, cache_file))
         all_scores[i] = data['score']
-        all_attentions[i] = data['attentions']
+        all_relevancies[i] = data['relevancy']
       else:
         remaining_headlines.append(headline)
         remaining_original_indices.append(i)
@@ -147,21 +179,24 @@ class ClickPredictor():
         user_index = torch.tensor([self.user_mapping[user_id]], device=self.model.device).unsqueeze(dim=0)
 
       self.model.eval()
-      with torch.no_grad():
-        outputs = self.model(**inputs, users=user_index, output_attentions=True)
-        probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
-        scores = probs[:,1].detach().numpy()
-        attentions = outputs.attentions[-1].squeeze(dim=0)
+      outputs = self.model(**inputs, users=user_index)
+      logits =outputs.logits
+      probs = torch.nn.functional.softmax(logits, dim=-1)
+      scores = probs[:,1].detach().cpu().numpy()
+      
+      predictions = torch.argmax(logits, axis=-1).detach()
+      summed_attention_mask=inputs['attention_mask'].sum(dim=1)
+      relevancies = self._generate_lrp(logits,summed_attention_mask=summed_attention_mask)
 
-        for i, score, attention in zip(remaining_original_indices,scores,attentions):
-          all_scores[i] = score.item()
-          #we are only interested in the cls token as it is used in our pooling step
-          all_attentions[i] = attention[:,0].numpy()
-    
-          cache_file = user_id + "#" + str(hash(headlines[i])) + ".npz"
-          np.savez(os.path.join(self.cache_dir.name, cache_file), score=all_scores[i], attentions=all_attentions[i])
+      for i, score, relevancy, non_padded_tokens in zip(remaining_original_indices,scores,relevancies, summed_attention_mask):
+        all_scores[i] = score.item()
+        relevancy = relevancy.squeeze()
+        all_relevancies[i] = relevancy.detach().cpu().numpy()[:non_padded_tokens]
+  
+        cache_file = user_id + "#" + str(hash(headlines[i])) + ".npz"
+        np.savez(os.path.join(self.cache_dir.name, cache_file), score=all_scores[i], relevancy=all_relevancies[i])
 
-    return np.array(all_scores), all_attentions
+    return np.array(all_scores), all_relevancies
 
   def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM", compare : bool = True):
     """
@@ -170,35 +205,24 @@ class ClickPredictor():
       headlines : (List[str]) : the list of headlines
       user_id (str) : either the user_id corresponding to the MIND dataset (for example) to calculate scores for historic users
                       or "CUSTOM" to calculate scores for the current new user
-      compare : bool : if True -> compare results against non-personalized predictions (needed for wordclouds); if False -> calculate personal scores without comparison
     :return
       scores : (List[float]) : a score for each headline specifying a probability for a click event (1.0 = 100%)
-      word_level_deviations (List[dict]): a list of dicts containing the headlines words and the deviation compared to the unpersonalized net
-      personal_deviations (List[float]) : a list of floats indicating the deviation of the personal click probability compared to the non-personalized net
+      word_level_scores (List[dict]): a list of dicts containing the headlines words and a relevancy score (between [0,1]) obtained from the lrp model
     """
     assert user_id == "CUSTOM" or user_id in self.user_mapping.keys(), "Given user id is not available"
 
-    personal_scores, personal_attention = self._get_score_and_attentions(headlines,user_id)
+    scores, relevancy_values = self._get_score_and_relevancies(headlines,user_id)
       
-    personal_deviations = None
-    word_deviations = None
+    word_relevancies = []
 
-    if compare:
-      non_personal_scores, non_personal_attentions = self._get_score_and_attentions(headlines,"NONE")
-      personal_deviations = np.abs(np.array(personal_scores)-np.array(non_personal_scores))
+    inputs = self.tokenizer(headlines)
+    for i, headline in enumerate(inputs['input_ids']):
+        current_tokens = self.tokenizer.convert_ids_to_tokens(headline)#[1:-1]
+        words, values = self._convert_tokens_to_words(current_tokens,relevancy_values[i])
+        word_values = dict(zip(words, values))
+        word_relevancies.append(word_values)
 
-      word_deviations = []
-      inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
-      for i, headline in enumerate(inputs['input_ids']):
-        current_tokens = self.tokenizer.convert_ids_to_tokens(headline)
-
-        word_deviations.append(self._extract_word_deviations(current_tokens,non_personal_attentions[i], personal_attention[i]))
-
-      #json_object = json.dumps({'personal_scores':personal_scores.tolist(), 'word_deviations':word_deviations, 'personal_deviations':personal_deviations.tolist()})
-      #with open(os.path.join(self.cache_dir.name, cache_file), "w") as outfile:
-      #  outfile.write(json_object)
-
-    return personal_scores, word_deviations, personal_deviations
+    return scores, word_relevancies
 
   def update_step(self, new_headline : str, new_label : int):
     """
@@ -262,7 +286,7 @@ class ClickPredictor():
     loss.backward()
 
     self.optimizer.step()
-    self.optimizer.zero_grad()
+    self.optimizer.zero_grad(set_to_none=True)
 
     self.model.eval()
 
@@ -287,7 +311,19 @@ class ClickPredictor():
     :return: personlized embedding in the shape (embedding_dim, 1)
     """
     return self.model.user_embeddings.weight[-1].detach().numpy()
+    
+  def reset_custom_data(self):
+    """
+    deletes personal files and cache
+    """
 
+    #reset personal user embedding
+    personal_user_embedding = torch.ones(1, self.model.config.embedding_size).normal_(mean=0.0, std=self.model.config.initializer_range)
+    torch.save(personal_user_embedding, self.user_embedding_path)
+    
+    #remove collected training samples
+    for f in glob.glob("training_samples_*.txt"):
+      os.remove(f)
 
 
 class RankingModule():
@@ -316,7 +352,7 @@ class RankingModule():
     assert exploration_ratio >= 0.0 and exploration_ratio <= 1.0
     assert len(headlines) == len(ids)
     
-    scores, _, _ = self.click_predictor.calculate_scores(headlines, user_id, compare=False) #compare is set to True to trigger caching
+    scores, _ = self.click_predictor.calculate_scores(headlines, user_id, compare=False) #compare is set to True to trigger caching
 
     headlines_sorted = [x for _, x in sorted(zip(scores, headlines), reverse=True)]
     ids_sorted =[x for _, x in sorted(zip(scores, ids), reverse=True)]
