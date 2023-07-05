@@ -7,6 +7,8 @@ from src.clustering.utils import fit_reducer, umap_transform
 from src.utils import load_headlines, \
     get_mind_id_from_index, generate_header, fit_standardizer, \
     standardize_data, set_session_state, get_wordcloud_from_attention
+    standardize_data, generate_wordcloud_from_user_category, set_session_state, get_words_from_attentions, \
+    generate_wordcloud
 
 ### GENERAL PAGE INFO ###
 st.set_page_config(

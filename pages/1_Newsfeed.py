@@ -9,9 +9,8 @@ from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
 from src.clustering.algorithm_wrappers.OpticsWrapper import OpticsWrapper
 from src.clustering.utils import umap_transform, fit_reducer
-from src.utils import fit_standardizer, standardize_data, load_headlines, \
-    generate_header, generate_wordcloud_deviation, set_session_state, get_words_from_attentions, \
-    get_wordcloud_from_attention
+from src.utils import load_headlines, \
+    generate_header, set_session_state, extract_unread
 
 ### GENERAL PAGE INFO ###
 
@@ -57,10 +56,7 @@ news_tinder.header('Newsfeed')
 
 
 headlines = load_headlines(config['DATA'])
-unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
-unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
-article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines)
-
+article_recommendations = extract_unread(ranking_module, headlines, st.session_state.article_mask)
 current_article = article_recommendations[0][0]
 current_index = article_recommendations[0][1]
 
