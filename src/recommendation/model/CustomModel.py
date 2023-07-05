@@ -7,7 +7,7 @@ from transformers.modeling_outputs import SequenceClassifierOutput
 
 from transformers.configuration_utils import PretrainedConfig
 
-from transformers.models.bert.modeling_bert import BertModel
+from .Bert import BertModel
 from .BertAdapters import BertLayerAdapters
 
 class BertForSequenceClassificationAdapters(BertPreTrainedModel):
@@ -29,7 +29,7 @@ class BertForSequenceClassificationAdapters(BertPreTrainedModel):
         self.user_embeddings = torch.nn.Embedding(config.num_users, self.embedding_size)
         #add additional projection layer if adapter_size != self.embedding_size
         if self.adapter_size != self.embedding_size:
-          self.user_projection = Linear(self.embedding_size, self.adapter_size)
+          self.user_projection = torch.nn.Linear(self.embedding_size, self.adapter_size)
         self.user_dropout = torch.nn.Dropout(config.user_dropout_prob)
         self.user_norm = torch.nn.LayerNorm(self.embedding_size, eps=config.layer_norm_eps)
         
@@ -135,7 +135,7 @@ class BertForSequenceClassificationAdapters(BertPreTrainedModel):
         samples = self.sample_norm(self.sample_comparison)
         samples = self.dropout(samples)
 
-        logits = torch.matmul((pooled_output, samples.T)) #dot product
+        logits = torch.matmul(pooled_output, samples.T) #dot product
 
         click_prediction = self.classifier(logits.detach())
 
