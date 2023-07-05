@@ -25,7 +25,6 @@ class ClusteringAlg:
         file_path = pathlib.Path(__file__).parent.parent.parent.parent / 'config.ini'
         config.read(file_path)
         self.n_clusters = int(config['Clustering']['NoClusters'])
-        self.dim_of_clustering =  config['Clustering']['Clustering_dim']
         self.config = config
 
     def train(self, data):
