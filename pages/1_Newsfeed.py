@@ -78,18 +78,17 @@ def handle_article(article_index, headline, read=1):
 
     # todo is this ok?
     _, neighbor = kdtree.query(user)
-
-    user_rd = user_embedding[neighbor].reshape(1, -1)
+    user_rd = user_embedding[neighbor[0]].reshape(1, -1)
     print(f"Transform: {time.time() - start}")
 
     st.session_state.user = user_rd[0]
 
 
-news_tinder.subheader(f"[{headlines.loc[current_index, 1].capitalize()}] :blue[{current_article}]")
-
-
 def read_later():
     st.session_state.article_mask[current_index] = False
+
+
+news_tinder.subheader(f"[{headlines.loc[current_index, 1].capitalize()}] :blue[{current_article}]")
 
 
 ll, lm, lr = news_tinder.columns(3, gap='large')
@@ -104,15 +103,25 @@ visualization.header('Clustering')
 visualization.write("Here you can see where you are in comparison to other users, and how your click behaviour "
                     "influences your position.")
 
-model = KMeansWrapper()
 
+@st.cache_resource
+def get_kmeans_model():
+    if config['Clustering']['Dimensionality'] == 'low':
+        embeddings = user_embedding
+    elif config['Clustering']['Dimensionality'] == 'high':
+        embeddings = click_predictor.get_historic_user_embeddings()
+    else:
+        raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
+    model = KMeansWrapper()
+    model.train(embeddings)
+    model.extract_representations(embeddings)  # return tuple (clusterid, location)
+    print(model.representants)
+    return model
+
+model = get_kmeans_model()
 if config['Clustering']['Dimensionality'] == 'low':
-    model.train(user_embedding)
-    model.extract_representations(user_embedding)  # return tuple (clusterid, location)
     prediction = model.predict(st.session_state.user)
 elif config['Clustering']['Dimensionality'] == 'high':
-    model.train(click_predictor.get_historic_user_embeddings())
-    model.extract_representations(click_predictor.get_historic_user_embeddings())  # return tuple (clusterid, location)
     prediction = model.predict(user=click_predictor.get_personal_user_embedding())
 else:
     raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
