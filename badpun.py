@@ -190,14 +190,10 @@ with recommendation_tab:
 with alternative_tab:
     ### 1. CLUSTERING AND SUGGESTION ####
     left_column, right_column = st.columns(2)
-    cluster_representant = model.interpret(prediction)
-    user_suggestion = model.suggest(cluster_representant, metric=int(config['Clustering']['SuggestionMetric']))
 
-    left_column.write(f"Your actual cluster is {prediction}. We recommend you to have a look at cluster {user_suggestion[0]}, "
-             f"which is the feed you see by default. Choose any other "
-             f"cluster below.")
+    left_column.write(f"Your actual cluster is {prediction}. Choose any other cluster below.")
     number = right_column.number_input('Cluster', min_value=0, max_value=int(config['Clustering']['NoClusters']) - 1,
-                             value=user_suggestion[0])
+                             value=prediction)
 
     ### 2. PAGE LAYOUT ###
     left, middle, right = st.columns(3)
