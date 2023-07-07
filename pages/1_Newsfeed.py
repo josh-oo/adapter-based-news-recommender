@@ -125,9 +125,11 @@ with recommendation_tab:
         user = click_predictor.get_personal_user_embedding().reshape(1, -1)
 
         # todo is this ok?
-        _, neighbor = kdtree.query(user)
-
-        user_rd = user_embedding[neighbor[0]]
+        if config['Clustering']['Dimensionality'] == 'low':
+            user_rd = reducer.transform(user)[0]
+        elif config['Clustering']['Dimensionality'] == 'high':
+            _, neighbor = kdtree.query(user)
+            user_rd = user_embedding[neighbor[0]]
 
         st.session_state.user = user_rd
 
