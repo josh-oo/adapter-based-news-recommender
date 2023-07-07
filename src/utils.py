@@ -95,7 +95,7 @@ def generate_wordcloud(word_dict):
 
 
 def generate_header():
-    l_small, l_right = st.columns([1, 4])
+    l_small, l_right = st.columns([1, 5])
     l_small.image('media/logo_dark.png', use_column_width='always')
     l_right.title('Balanced Article Discovery')
     l_right.title('through Playful User Nudging')

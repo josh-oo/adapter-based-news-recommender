@@ -1,3 +1,4 @@
+import configparser
 import time
 import streamlit as st
 import umap
@@ -17,7 +18,11 @@ st.set_page_config(
 
 generate_header()
 remove_old_files()
-config = st.session_state.config
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+if 'config' not in st.session_state:
+    st.session_state['config'] = config
 
 
 ### DATA LOADING ###
@@ -95,7 +100,24 @@ exemplars = user_embedding[model.repr_indeces]
 
 ##### TABS ####
 
-recommendation_tab, alternative_tab = st.tabs(["Personalized Recommendation", "Alternative Feeds"])
+cold_start_tab, recommendation_tab, alternative_tab = st.tabs(["Reset User", "Personalized Recommendation", "Alternative Feeds"])
+
+with cold_start_tab:
+    st.write('To start off, choose a user which matches your interest most:')
+
+    columns = st.columns(3)
+    buttons = [column.button(f"User {i + 1}", use_container_width=True) for i, column in enumerate(columns)]
+
+    # # todo initialize as 1 in proper dimension
+    # if 'user' not in st.session_state:
+    #     st.session_state['user'] = []
+
+    # todo plug in when ready
+    # for user, button in zip(users, buttons):
+    #     if button:
+    #         st.session_state.cold_start = user
+
+    # todo clean modell files
 
 with recommendation_tab:
     ### LAYOUT ###
