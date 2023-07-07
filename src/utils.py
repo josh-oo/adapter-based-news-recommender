@@ -95,32 +95,30 @@ def set_session_state(emergency_user):
                               'NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
 
-@st.cache_data
-def preprocess_word_frequencies(word_deviations):
-    """
-    Preprocess following steps:
-    1. Keep only top three words from each title
-    2. Filter out Stopwords and short words
-    :param word_deviations:
-    :return:
-    """
-    c_word_deviations = Counter()
-    for i, headline_counter in enumerate(word_deviations):
-        sorted_headline = Counter(headline_counter).most_common(3)
-        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS and len(w) >= 3]
-        c_word_deviations += dict(sorted_headline)
-    return c_word_deviations
-
-
 def extract_unread(headlines):
     unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
     unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
     return unread_headlines_ind, unread_headlines
 
 
-def get_wordcloud_from_attention(scores, word_deviations, personal_deviations):
-    # only keep recommended articles
-    word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
+def get_wordcloud_from_attention(scores, word_deviations, personal_deviations, mode='scaling'):
+    c_word_deviations = Counter()
 
-    c_word_deviations = preprocess_word_frequencies(word_deviations)
+    if mode == 'counting':
+        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.7]
+    elif mode == 'scaling':
+        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
+    else:
+        raise ValueError("Not a valid mode")
+
+    for i, headline_counter in enumerate(word_deviations):
+        sorted_headline = Counter(headline_counter).most_common(3)
+        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS and len(w) >= 3]
+        if mode == 'counting':
+            words = [w for (w, s) in sorted_headline]
+            c_word_deviations.update(words)
+        elif mode == 'scaling':
+            scaled_headline = [(w, s*score) for score, (w, s) in zip(scores, sorted_headline)]
+            c_word_deviations += dict(scaled_headline)
+
     return generate_wordcloud(c_word_deviations)
