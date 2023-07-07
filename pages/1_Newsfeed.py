@@ -2,12 +2,13 @@ import os
 import time
 import streamlit as st
 import numpy as np
+import umap
 from sklearn.neighbors import NearestNeighbors
 from scipy.spatial import KDTree
 from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
-from src.clustering.utils import umap_transform, fit_reducer
+from src.clustering.utils import umap_transform
 from src.utils import fit_standardizer, standardize_data, load_headlines, \
     generate_header, set_session_state, extract_unread, \
     get_wordcloud_from_attention, remove_old_files
@@ -48,17 +49,35 @@ def load_rm():
 def load_kdtree():
     return KDTree(click_predictor.get_historic_user_embeddings())
 
+@st.cache_resource
+def fit_reducer():
+    user_embedding = click_predictor.get_historic_user_embeddings()
+    config = st.session_state['config']['UMAP']
+    fit = umap.UMAP(
+        n_neighbors= int(config['n_neighbors']),
+        min_dist= float(config['min_dist']),
+        n_components= int(config['n_components']),
+        metric=config['metric']
+    )
+    return fit.fit(user_embedding)
+
+
+start = time.time()
 click_predictor = load_predictor()
 ranking_module = load_rm()
 kdtree = load_kdtree()
+reducer = fit_reducer()
 
-user_embedding = click_predictor.get_historic_user_embeddings()
-reducer = fit_reducer(st.session_state['config']['UMAP'], user_embedding)
-user_embedding = umap_transform(reducer, user_embedding)
+@st.cache_data
+def umap_transform():
+    return reducer.transform(click_predictor.get_historic_user_embeddings())
+
+user_embedding = umap_transform()
 
 set_session_state(user_embedding[3])  # todo replace
-
+print(f"Load data: {time.time() - start}")
 ### 1. NEWS RECOMMENDATIONS ###
+start = time.time()
 
 headlines = load_headlines(config['DATA'])
 unread_headlines_ind, unread_headlines = extract_unread(headlines)
@@ -66,22 +85,20 @@ article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, un
 current_article = article_recommendations[0][0]
 current_index = article_recommendations[0][1]
 
-
+print(f"Get recommendation: {time.time() - start}")
 def handle_article(article_index, headline, read=1):
     start = time.time()
     st.session_state.article_mask[article_index] = False
     click_predictor.update_step(headline, read)
 
-    print(f"Update: {time.time() - start}")
     user = click_predictor.get_personal_user_embedding().reshape(1, -1)
-    print(f"Replace: {time.time() - start}")
 
     # todo is this ok?
     _, neighbor = kdtree.query(user)
-    user_rd = user_embedding[neighbor[0]].reshape(1, -1)
-    print(f"Transform: {time.time() - start}")
+    user_rd = user_embedding[neighbor[0]]
+    print(f"Run handle: {time.time() - start}")
 
-    st.session_state.user = user_rd[0]
+    st.session_state.user = user_rd
 
 
 def read_later():
@@ -99,10 +116,6 @@ lr.button('Read', use_container_width=True, on_click=handle_article, type="prima
           args=(current_index, current_article, 1))
 
 ### 2. CLUSTERING ####
-visualization.header('Clustering')
-visualization.write("Here you can see where you are in comparison to other users, and how your click behaviour "
-                    "influences your position.")
-
 
 @st.cache_resource
 def get_kmeans_model():
@@ -115,7 +128,7 @@ def get_kmeans_model():
     model = KMeansWrapper()
     model.train(embeddings)
     model.extract_representations(embeddings)  # return tuple (clusterid, location)
-    print(model.representants)
+    print(model.repr_indeces)
     return model
 
 model = get_kmeans_model()
@@ -126,16 +139,19 @@ elif config['Clustering']['Dimensionality'] == 'high':
 else:
     raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
 
-visualization.markdown(f"**You are assigned to cluster** {prediction}")
-model.visualize(user_embedding, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
+visualization.header(f"You are assigned to cluster {prediction}")
+
+exemplars = user_embedding[model.repr_indeces]
+model.visualize(user_embedding, exemplars, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
 visualization.plotly_chart(model.figure, use_container_width=True)
 
 # ### 2.2. INTERPRETING ###
 interpretation.header('Interpretation')
+start = time.time()
 
 results = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
-
 wordcloud = get_wordcloud_from_attention(*results)
+print(f"Words: {time.time()-start}")
 
 # Display the generated image:
 interpretation.image(wordcloud.to_array(), use_column_width="auto")
