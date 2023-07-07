@@ -145,6 +145,7 @@ with recommendation_tab:
         user = click_predictor.get_personal_user_embedding().reshape(1, -1)
 
         # todo is this ok?
+        # ok, alternatvie is in the report
         if config['Dimensionality'] == 'low':
             user_rd = reducer.transform(user)[0]
         elif config['Dimensionality'] == 'high':
@@ -200,9 +201,11 @@ with alternative_tab:
     left.header('Newsfeed')
 
     # get represenatnt of cluster chosen by user
-    exemplar_embedding, exemplar_index = model.get_exemplar_of_cluster(number)
+
     # todo get id from suggestion
-    id = get_mind_id_from_index(exemplar_index)
+    id = get_mind_id_from_index(model.repr_indeces[number])
+    print(id)
+
 
     def button_callback_alternative(article_index, test):
         st.session_state.article_mask[article_index] = False
@@ -221,7 +224,7 @@ with alternative_tab:
 
     middle.header('Clustering')
     model.visualize(user_embedding, exemplars,
-                    [("Actual you", st.session_state.user), ("Feed you are seeing", exemplar_embedding)])
+                    [("Actual you", st.session_state.user), ("Feed you are seeing", user_embedding[model.repr_indeces[number]])])
     middle.plotly_chart(model.figure)
 
     ### 2.3. INTERPRETATION ###
