@@ -89,7 +89,7 @@ def generate_wordcloud(word_dict):
     # cloud_mask = load_image()
     color_function = get_single_color_func('#3070B3')
 
-    return WordCloud(scale=3, contour_width = 0, color_func = color_function, # mask = cloud_mask,
+    return WordCloud(scale=3, contour_width = 0, color_func = color_function, width=200, height=250,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
