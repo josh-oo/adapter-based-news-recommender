@@ -112,30 +112,6 @@ class KMeansWrapper:
         else:
             raise Exception('Not a valid value for the parameter "metric"')
 
-    def suggest(self, comparing_vector, metric='max'):
-        """
-        Given a vector, representing a user in space, suggest another user (a represantant) from another cluster.
-        :param comparing_vector: user embedding
-        :param metric: options 1) 'max' gives the cluster whos medoid is furthest away from comparing vector. 2) a float
-        between 0 and 1 gives the medoid represented by that percentage of distance from highest of lowest, e.g. 0.66
-        gives the medoid whos at 2/3 of the max distance
-        :return: another user embedding
-        """
-        # for simplicity for now take cluster that is furthest away
-        labels, locations = self.representants
-        distsance_ind = np.argsort(euclidean_distances(comparing_vector.reshape(1, -1), locations))[0]
-        if metric == 'max':
-            return distsance_ind[-1], locations[distsance_ind[-1]]
-        else:
-            try:
-                percentage = int(metric)
-                if not 0 < percentage <= 100:  # check if in range
-                    raise ValueError
-                index = int(len(distsance_ind) * percentage / 100) - 1
-                return distsance_ind[index], locations[distsance_ind[index]]
-            except ValueError:  # checks if float
-                print("Not a valid suggestion metric. Pass value 'max' or percentage in between 1 and 100")
-
     def get_cluster_representant(self, id):
         if id > len(self.representants[0]):
             raise ValueError
