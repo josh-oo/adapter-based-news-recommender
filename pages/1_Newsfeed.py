@@ -165,27 +165,26 @@ with recommendation_tab:
 
 with alternative_tab:
     ### 1. CLUSTERING AND SUGGESTION ####
+    left_column, right_column = st.columns(2)
     cluster_representant = model.interpret(prediction)
     user_suggestion = model.suggest(cluster_representant, metric=int(config['Clustering']['SuggestionMetric']))
 
-    st.write(f"Your actual cluster is {prediction}. We recommend you to have a look at cluster {user_suggestion[0]}, "
+    left_column.write(f"Your actual cluster is {prediction}. We recommend you to have a look at cluster {user_suggestion[0]}, "
              f"which is the feed you see by default. Choose any other "
              f"cluster below.")
-    number = st.number_input('Cluster', min_value=0, max_value=int(config['Clustering']['NoClusters']) - 1,
+    number = right_column.number_input('Cluster', min_value=0, max_value=int(config['Clustering']['NoClusters']) - 1,
                              value=user_suggestion[0])
+
+    ### 2. PAGE LAYOUT ###
+    left, middle, right = st.columns(3)
+
+    ### 2.1 Newsfeed ###
+    left.header('Newsfeed')
 
     # get represenatnt of cluster chosen by user
     exemplar_embedding, exemplar_index = model.get_cluster_representant(number)
     # todo get id from suggestion
     id = get_mind_id_from_index(exemplar_index)
-
-    ### 3. Page Layout ###
-
-    left_column, right_column = st.columns(2)
-    left_column.header('Newsfeed')
-
-
-    ### 3.1 Newsfeed ###
 
     def button_callback_alternative(article_index, test):
         st.session_state.article_mask[article_index] = False
@@ -194,25 +193,26 @@ with alternative_tab:
     article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
                                                             take_top_k=40)[:10]
 
-    article_fields = [left_column.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
+    article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
                                          args=(article_index, 0))
                       for button_index, (article, article_index, score) in
                       enumerate(article_recommendations)]  # sorry for ugly
 
-    ### 3.2. INTERPRETING ###
+    ### 2.2. Clustering ###
 
-    right_column.header('Clustering')
+    middle.header('Clustering')
     model.visualize(user_embedding, exemplars,
                     [("Actual you", st.session_state.user), ("Feed you are seeing", exemplar_embedding)])
-    right_column.plotly_chart(model.figure)
+    middle.plotly_chart(model.figure)
 
+    ### 2.3. INTERPRETATION ###
     # todo these can be precaclulated
-    right_column.header('Interpretation')
+    right.header('Interpretation')
 
     results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id)
 
     wordcloud = get_wordcloud_from_attention(*results)
 
     # Display the generated image:
-    right_column.image(wordcloud.to_array(), use_column_width="auto")
+    right.image(wordcloud.to_array(), use_column_width="auto")
