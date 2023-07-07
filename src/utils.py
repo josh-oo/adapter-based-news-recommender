@@ -29,10 +29,10 @@ def load_data(path):
 
 
 @st.cache_data
-def load_headlines(_config):
+def load_headlines():
     # TODO place recommender system here
-    headline_path = _config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(_config['NoHeadlines']), [1, 3]]
+    headline_path = st.session_state.config['HeadlinePath']
+    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(st.session_state.config['NoHeadlines']), [1, 3]]
 
 
 @st.cache_data
@@ -51,14 +51,14 @@ def load_normalized_category_frequencies(path, user_mapping):
 
 @st.cache_data
 def get_mind_id_from_index(id):
-    user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
+    user_mapping = json.load(open(st.session_state.config['IdMappingPath']))
     return list(user_mapping.keys())[list(user_mapping.values()).index(id)]
 
 
 def generate_wordcloud_from_user_category(labels, cluster_id):
     # Opening JSON file
-    user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
-    user_category_frequ = load_normalized_category_frequencies(st.session_state.config['DATA']['UserCategoriesPath'],
+    user_mapping = json.load(open(st.session_state.config['IdMappingPath']))
+    user_category_frequ = load_normalized_category_frequencies(st.session_state.config['UserCategoriesPath'],
                                                                user_mapping)
 
     index_current_cluster_points = (labels == cluster_id).nonzero()[0]
@@ -91,8 +91,7 @@ def set_session_state(emergency_user):
         st.session_state['user'] = st.session_state['cold_start']
     if 'article_mask' not in st.session_state:
         st.session_state['article_mask'] = np.array(
-            [True] * (int(st.session_state.config['DATA'][
-                              'NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
+            [True] * (int(st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
 
 def extract_unread(headlines):

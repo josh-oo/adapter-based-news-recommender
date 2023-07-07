@@ -21,8 +21,8 @@ class KMeansWrapper:
         config = configparser.ConfigParser()
         file_path = pathlib.Path(__file__).parent.parent.parent / 'config.ini'
         config.read(file_path)
-        self.n_clusters = int(config['Clustering']['NoClusters'])
-        self.config = config
+        self.config = config[config['DEFAULT']['Dimensionality']]
+        self.n_clusters = int(self.config['NoClusters'])
 
     def extract_representations(self, X, mode='medoid'):
         """
