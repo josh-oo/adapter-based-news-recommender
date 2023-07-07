@@ -8,11 +8,11 @@ import plotly.graph_objects as go
 
 
 class KMeansWrapper:
-    def __init__(self):
-        self.model = None
-        self.representants = None  # the "user story" of each cluster
-        self.labels = None
+    def __init__(self, X):
         self.get_cluster_config()
+        self.model = KMeans(n_clusters=self.n_clusters, random_state=0, n_init="auto").fit(X)
+        self.labels = self.model.predict(X)
+        self.extract_representations(X)  # the "user story" of each cluster
 
     def get_cluster_config(self):
         """
@@ -23,17 +23,6 @@ class KMeansWrapper:
         config.read(file_path)
         self.n_clusters = int(config['Clustering']['NoClusters'])
         self.config = config
-
-    def interpret(self, comparison_label):
-        """
-        Get location of the represantant of cluster comparison_label.
-        This is not a simple array access as long as we are not sure that every sklearn method return the labels
-        in the correct order.
-        """
-        for label, location in zip(self.representants[0], self.representants[1]):
-            if label == comparison_label:
-                return location
-        raise Exception("Matching label not found")
 
     def extract_representations(self, X, mode='medoid'):
         """
@@ -46,22 +35,16 @@ class KMeansWrapper:
         :return: List of representants
         """
         if mode == 'centroid':
-            self.representants = self.centroids(X)
+            self.representants = self.centroids()
         elif mode == 'medoid':
             self.representants = self.medoids(X)
         else:
             raise Exception("Not a valid mode")
 
-        self.repr_indeces = [np.nonzero(np.all(X == repr, axis=1))[0][0] for repr in self.representants[1]]
+        self.repr_indeces = [np.nonzero(np.all(X == repr, axis=1))[0][0] for repr in self.representants]
 
-    def train(self, X):
-        model = KMeans(n_clusters=self.n_clusters, random_state=0, n_init="auto").fit(X)
-        self.model = model
-        self.labels = model.predict(X)
-
-    def centroids(self, X):
-        centers = self.model.cluster_centers_
-        return list(range(self.n_clusters)), centers
+    def centroids(self):
+        return self.model.cluster_centers_
 
     def medoids(self, X):
         centers = self.model.cluster_centers_
@@ -69,7 +52,7 @@ class KMeansWrapper:
         for label, center in enumerate(centers):
             dists = euclidean_distances(center.reshape(1, -1), X[self.labels == label])
             repr[label] = X[self.labels == label][np.argmin(dists[0])]
-        return list(range(self.n_clusters)), repr
+        return repr
 
     def predict(self, user):
         return self.model.predict(user[np.newaxis, ...])[0]
@@ -112,8 +95,7 @@ class KMeansWrapper:
         else:
             raise Exception('Not a valid value for the parameter "metric"')
 
-    def get_cluster_representant(self, id):
-        if id > len(self.representants[0]):
+    def get_exemplar_of_cluster(self, id):
+        if id > len(self.representants):
             raise ValueError
-        labels, locations = self.representants
-        return locations[id], self.repr_indeces[id]
+        return self.representants[id], self.repr_indeces[id]
