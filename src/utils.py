@@ -71,9 +71,7 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
 
 
 def generate_wordcloud(word_dict):
-    # cloud_mask = load_image()
     color_function = get_single_color_func('#3070B3')
-
     return WordCloud(scale=3, contour_width=0, color_func=color_function, width=200, height=250,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
@@ -99,8 +97,14 @@ def set_session_state(emergency_user):
 
 @st.cache_data
 def preprocess_word_frequencies(word_deviations):
+    """
+    Preprocess following steps:
+    1. Keep only top three words from each title
+    2. Filter out Stopwords and short words
+    :param word_deviations:
+    :return:
+    """
     c_word_deviations = Counter()
-    # todo speed up
     for i, headline_counter in enumerate(word_deviations):
         sorted_headline = Counter(headline_counter).most_common(3)
         sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS and len(w) >= 3]
@@ -115,6 +119,7 @@ def extract_unread(headlines):
 
 
 def get_wordcloud_from_attention(scores, word_deviations, personal_deviations):
+    # only keep recommended articles
     word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
 
     c_word_deviations = preprocess_word_frequencies(word_deviations)
