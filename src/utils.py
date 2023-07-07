@@ -6,16 +6,14 @@ import time
 import numpy as np
 import pandas as pd
 import streamlit as st
-from sklearn.preprocessing import StandardScaler
 from wordcloud import WordCloud
 from collections import Counter
 from wordcloud import STOPWORDS
 from wordcloud import get_single_color_func
-from PIL import Image
 
 
 def remove_old_files():
-    if 'clean' not in st.session_state:
+    if 'clean' not in st.session_state or st.session_state['clean'] == False:
         try:
             os.remove('personal_user_embedding.pt')
             for f in glob.glob("training_samples_*.txt"):
@@ -23,16 +21,6 @@ def remove_old_files():
         except OSError:
             pass
         st.session_state['clean'] = True
-
-
-@st.cache_data
-def fit_standardizer(embeddings):
-    return StandardScaler().fit(embeddings)
-
-
-@st.cache_data
-def standardize_data(_scaler, embeddings):
-    return _scaler.transform(embeddings)
 
 
 @st.cache_data
@@ -81,15 +69,12 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
 
     return generate_wordcloud(freq)
 
-@st.cache_data
-def load_image():
-    return np.array(Image.open(st.session_state['config']['Wordcloud']['MaskPath']))
 
 def generate_wordcloud(word_dict):
     # cloud_mask = load_image()
     color_function = get_single_color_func('#3070B3')
 
-    return WordCloud(scale=3, contour_width = 0, color_func = color_function, width=200, height=250,
+    return WordCloud(scale=3, contour_width=0, color_func=color_function, width=200, height=250,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
