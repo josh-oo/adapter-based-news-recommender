@@ -204,8 +204,6 @@ with alternative_tab:
 
     # todo get id from suggestion
     id = get_mind_id_from_index(model.repr_indeces[number])
-    print(id)
-
 
     def button_callback_alternative(article_index, test):
         st.session_state.article_mask[article_index] = False
