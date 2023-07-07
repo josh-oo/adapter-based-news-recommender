@@ -63,9 +63,7 @@ def get_kmeans_model():
         embeddings = click_predictor.get_historic_user_embeddings()
     else:
         raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
-    model = KMeansWrapper()
-    model.train(embeddings)
-    model.extract_representations(embeddings)  # return tuple (clusterid, location)
+    model = KMeansWrapper(embeddings)
     print(model.repr_indeces)
     return model
 
@@ -202,7 +200,7 @@ with alternative_tab:
     left.header('Newsfeed')
 
     # get represenatnt of cluster chosen by user
-    exemplar_embedding, exemplar_index = model.get_cluster_representant(number)
+    exemplar_embedding, exemplar_index = model.get_exemplar_of_cluster(number)
     # todo get id from suggestion
     id = get_mind_id_from_index(exemplar_index)
 
