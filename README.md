@@ -4,7 +4,7 @@
 Install pip environment via `pip install -r requirements.txt`
 
 Run with 
-`streamlit run Start.py` from root directory.
+`streamlit run badpun.py` from root directory.
 
 ### Structure
 The directory `pages/` holds the streamlit subpages in the order in which they are shown in the interface. 
