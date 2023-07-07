@@ -19,11 +19,12 @@ st.set_page_config(
 generate_header()
 remove_old_files()
 
-config = configparser.ConfigParser()
-config.read('config.ini')
 if 'config' not in st.session_state:
-    st.session_state['config'] = config
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    st.session_state['config'] = config[config['DEFAULT']['Dimensionality']]
 
+config = st.session_state['config']
 
 ### DATA LOADING ###
 @st.cache_resource
@@ -44,7 +45,6 @@ def load_kdtree():
 @st.cache_resource
 def fit_reducer():
     user_embedding = click_predictor.get_historic_user_embeddings()
-    config = st.session_state['config']['UMAP']
     fit = umap.UMAP(
         n_neighbors=int(config['n_neighbors']),
         min_dist=float(config['min_dist']),
@@ -56,9 +56,9 @@ def fit_reducer():
 
 @st.cache_resource
 def get_kmeans_model():
-    if config['Clustering']['Dimensionality'] == 'low':
+    if config['Dimensionality'] == 'low':
         embeddings = user_embedding
-    elif config['Clustering']['Dimensionality'] == 'high':
+    elif config['Dimensionality'] == 'high':
         embeddings = click_predictor.get_historic_user_embeddings()
     else:
         raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
@@ -83,15 +83,15 @@ model = get_kmeans_model()
 
 set_session_state(user_embedding[3])  # todo replace
 
-headlines = load_headlines(config['DATA'])
+headlines = load_headlines()
 unread_headlines_ind, unread_headlines = extract_unread(headlines)
 
-if config['Clustering']['Dimensionality'] == 'low':
+if config['Dimensionality'] == 'low':
     prediction = model.predict(st.session_state.user)
-elif config['Clustering']['Dimensionality'] == 'high':
+elif config['Dimensionality'] == 'high':
     prediction = model.predict(user=click_predictor.get_personal_user_embedding())
 else:
-    raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
+    raise ValueError("Not a valid input for config]")
 
 exemplars = user_embedding[model.repr_indeces]
 
@@ -144,9 +144,9 @@ with recommendation_tab:
         user = click_predictor.get_personal_user_embedding().reshape(1, -1)
 
         # todo is this ok?
-        if config['Clustering']['Dimensionality'] == 'low':
+        if config['Dimensionality'] == 'low':
             user_rd = reducer.transform(user)[0]
-        elif config['Clustering']['Dimensionality'] == 'high':
+        elif config['Dimensionality'] == 'high':
             _, neighbor = kdtree.query(user)
             user_rd = user_embedding[neighbor[0]]
 
@@ -189,7 +189,7 @@ with alternative_tab:
     left_column, right_column = st.columns(2)
 
     left_column.write(f"Your actual cluster is {prediction}. Choose any other cluster below.")
-    number = right_column.number_input('Cluster', min_value=0, max_value=int(config['Clustering']['NoClusters']) - 1,
+    number = right_column.number_input('Cluster', min_value=0, max_value=int(config['NoClusters']) - 1,
                              value=prediction)
 
     ### 2. PAGE LAYOUT ###
