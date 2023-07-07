@@ -1,6 +1,5 @@
 import configparser
 import pathlib
-import pandas as pd
 from sklearn import metrics
 from sklearn.cluster import KMeans
 import numpy as np
@@ -77,7 +76,33 @@ class KMeansWrapper:
 
     def visualize(self, data, repr, points):
         labels = self.model.labels_
-        self.visualize_old(data, labels, repr, points)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter3d(x=data[:, 0], y=data[:, 1], z=data[:, 2],
+                                   mode='markers',
+                                   marker=dict(size=1),
+                                   text=labels,
+                                   hoverinfo="text+name",
+                                   marker_color=labels, opacity=1, name="Historic Users"))
+        fig.add_trace(go.Scatter3d(x=repr[:, 0], y=repr[:, 1], z=repr[:, 2],
+                                   mode='markers',
+                                   marker=dict(
+                                       size=2),
+                                   text=list(range(len(repr))),
+                                   hoverinfo="text+name",
+                                   marker_color=list(range(len(repr))), name="Exemplars"))
+
+        for (label, point) in points:
+            fig.add_trace(
+                go.Scatter3d(x=[point[0]], y=[point[1]], z=[point[2]],
+                             marker_symbol=['diamond'],
+                             marker=dict(
+                                 size=3),
+                             hoverinfo="name",
+                             mode='markers', name=label)
+                # marker_color=[self.predict(user)]) # todo
+            )
+        fig.update_layout(height=800)  # todo configure
+        self.figure = fig
 
     def measure_performance(self, X, metric='chi'):
         if metric == 'chi':
@@ -116,33 +141,3 @@ class KMeansWrapper:
             raise ValueError
         labels, locations = self.representants
         return locations[id], self.repr_indeces[id]
-
-    def visualize_old(self, data, labels, repr, points=None) -> go:
-        # TODO: plot colour also
-        fig = go.Figure()
-        fig.add_trace(go.Scatter3d(x=data[:, 0], y=data[:, 1], z=data[:, 2],
-                                   mode='markers',
-                                   marker=dict(size=1),
-                                   text=labels,
-                                   hoverinfo="text+name",
-                                   marker_color=labels, opacity=1, name="Historic Users"))
-        fig.add_trace(go.Scatter3d(x=repr[:, 0], y=repr[:, 1], z=repr[:, 2],
-                                   mode='markers',
-                                   marker=dict(
-                                       size=2),
-                                   text=list(range(len(repr))),
-                                   hoverinfo="text+name",
-                                   marker_color=list(range(len(repr))), name="Exemplars"))
-
-        for (label, point) in points:
-            fig.add_trace(
-                go.Scatter3d(x=[point[0]], y=[point[1]], z=[point[2]],
-                             marker_symbol=['diamond'],
-                             marker=dict(
-                                 size=3),
-                             hoverinfo="name",
-                             mode='markers', name=label)
-                # marker_color=[self.predict(user)]) # todo
-            )
-        fig.update_layout(height=800)  # todo configure
-        self.figure = fig
