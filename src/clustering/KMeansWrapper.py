@@ -20,7 +20,7 @@ class KMeansWrapper:
         Gets parameters from config file and sets them as class attributes
         """
         config = configparser.ConfigParser()
-        file_path = pathlib.Path(__file__).parent.parent.parent.parent / 'config.ini'
+        file_path = pathlib.Path(__file__).parent.parent.parent / 'config.ini'
         config.read(file_path)
         self.n_clusters = int(config['Clustering']['NoClusters'])
         self.config = config

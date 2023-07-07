@@ -1,38 +1,23 @@
-import os
 import time
 import streamlit as st
-import numpy as np
 import umap
-from sklearn.neighbors import NearestNeighbors
 from scipy.spatial import KDTree
-from src.clustering.algorithm_wrappers.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
-from src.clustering.algorithm_wrappers.KMeansWrapper import KMeansWrapper
-from src.clustering.utils import umap_transform
-from src.utils import fit_standardizer, standardize_data, load_headlines, \
+from src.clustering.KMeansWrapper import KMeansWrapper
+from src.utils import load_headlines, \
     generate_header, set_session_state, extract_unread, \
-    get_wordcloud_from_attention, remove_old_files
+    get_wordcloud_from_attention, remove_old_files, get_mind_id_from_index
 
 ### GENERAL PAGE INFO ###
 
 st.set_page_config(
-    page_title="badpun - Newsfeed",
+    page_title="badpun",
     layout="wide"
 )
 
 generate_header()
 remove_old_files()
 config = st.session_state.config
-
-### LAYOUT ###
-left_column, right_column = st.columns([3, 1])
-
-news_tinder = left_column.container()
-
-lower_left, lower_right = st.columns(2)
-
-visualization = lower_left.container()
-interpretation = lower_right.container()
 
 
 ### DATA LOADING ###
@@ -41,81 +26,29 @@ def load_predictor():
     return ClickPredictor(huggingface_url="josh-oo/news-classifier",
                           commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
 
+
 @st.cache_resource
 def load_rm():
     return RankingModule(click_predictor)
 
+
 @st.cache_resource
 def load_kdtree():
     return KDTree(click_predictor.get_historic_user_embeddings())
+
 
 @st.cache_resource
 def fit_reducer():
     user_embedding = click_predictor.get_historic_user_embeddings()
     config = st.session_state['config']['UMAP']
     fit = umap.UMAP(
-        n_neighbors= int(config['n_neighbors']),
-        min_dist= float(config['min_dist']),
-        n_components= int(config['n_components']),
+        n_neighbors=int(config['n_neighbors']),
+        min_dist=float(config['min_dist']),
+        n_components=int(config['n_components']),
         metric=config['metric']
     )
     return fit.fit(user_embedding)
 
-
-start = time.time()
-click_predictor = load_predictor()
-ranking_module = load_rm()
-kdtree = load_kdtree()
-reducer = fit_reducer()
-
-@st.cache_data
-def umap_transform():
-    return reducer.transform(click_predictor.get_historic_user_embeddings())
-
-user_embedding = umap_transform()
-
-set_session_state(user_embedding[3])  # todo replace
-print(f"Load data: {time.time() - start}")
-### 1. NEWS RECOMMENDATIONS ###
-start = time.time()
-
-headlines = load_headlines(config['DATA'])
-unread_headlines_ind, unread_headlines = extract_unread(headlines)
-article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=40)
-current_article = article_recommendations[0][0]
-current_index = article_recommendations[0][1]
-
-print(f"Get recommendation: {time.time() - start}")
-def handle_article(article_index, headline, read=1):
-    start = time.time()
-    st.session_state.article_mask[article_index] = False
-    click_predictor.update_step(headline, read)
-
-    user = click_predictor.get_personal_user_embedding().reshape(1, -1)
-
-    # todo is this ok?
-    _, neighbor = kdtree.query(user)
-    user_rd = user_embedding[neighbor[0]]
-    print(f"Run handle: {time.time() - start}")
-
-    st.session_state.user = user_rd
-
-
-def read_later():
-    st.session_state.article_mask[current_index] = False
-
-
-news_tinder.subheader(f"[{headlines.loc[current_index, 1].capitalize()}] :blue[{current_article}]")
-
-
-ll, lm, lr = news_tinder.columns(3, gap='large')
-
-ll.button('Skip', use_container_width=True, on_click=handle_article, args=(current_index, current_article, 0))
-lm.button('Maybe later', use_container_width=True, on_click=read_later)
-lr.button('Read', use_container_width=True, on_click=handle_article, type="primary",
-          args=(current_index, current_article, 1))
-
-### 2. CLUSTERING ####
 
 @st.cache_resource
 def get_kmeans_model():
@@ -131,7 +64,26 @@ def get_kmeans_model():
     print(model.repr_indeces)
     return model
 
+
+click_predictor = load_predictor()
+ranking_module = load_rm()
+kdtree = load_kdtree()
+reducer = fit_reducer()
+
+
+@st.cache_data
+def umap_transform():
+    return reducer.transform(click_predictor.get_historic_user_embeddings())
+
+
+user_embedding = umap_transform()
 model = get_kmeans_model()
+
+set_session_state(user_embedding[3])  # todo replace
+
+headlines = load_headlines(config['DATA'])
+unread_headlines_ind, unread_headlines = extract_unread(headlines)
+
 if config['Clustering']['Dimensionality'] == 'low':
     prediction = model.predict(st.session_state.user)
 elif config['Clustering']['Dimensionality'] == 'high':
@@ -139,19 +91,128 @@ elif config['Clustering']['Dimensionality'] == 'high':
 else:
     raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
 
-visualization.header(f"You are assigned to cluster {prediction}")
-
 exemplars = user_embedding[model.repr_indeces]
-model.visualize(user_embedding, exemplars, [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
-visualization.plotly_chart(model.figure, use_container_width=True)
 
-# ### 2.2. INTERPRETING ###
-interpretation.header('Interpretation')
-start = time.time()
+##### TABS ####
 
-results = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
-wordcloud = get_wordcloud_from_attention(*results)
-print(f"Words: {time.time()-start}")
+recommendation_tab, alternative_tab = st.tabs(["Personalized Recommendation", "Alternative Feeds"])
 
-# Display the generated image:
-interpretation.image(wordcloud.to_array(), use_column_width="auto")
+with recommendation_tab:
+    ### LAYOUT ###
+    left_column, right_column = st.columns([3, 1])
+
+    news_tinder = left_column.container()
+
+    lower_left, lower_right = st.columns(2)
+
+    visualization = lower_left.container()
+    interpretation = lower_right.container()
+
+    ### 1. NEWS RECOMMENDATIONS ###
+    start = time.time()
+
+    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=40)
+
+    print(f"Get recommendation: {time.time() - start}")
+    current_article = article_recommendations[0][0]
+    current_index = article_recommendations[0][1]
+
+
+    def handle_article(article_index, headline, read=1):
+        st.session_state.article_mask[article_index] = False
+        click_predictor.update_step(headline, read)  # online learning only performed on positive sample
+
+        user = click_predictor.get_personal_user_embedding().reshape(1, -1)
+
+        # todo is this ok?
+        _, neighbor = kdtree.query(user)
+
+        user_rd = user_embedding[neighbor[0]]
+
+        st.session_state.user = user_rd
+
+
+    def read_later():
+        st.session_state.article_mask[current_index] = False
+
+
+    news_tinder.subheader(f"[{headlines.loc[current_index, 1].capitalize()}] :blue[{current_article}]")
+
+    ll, lm, lr = news_tinder.columns(3, gap='large')
+
+    ll.button('Skip', use_container_width=True, on_click=handle_article, args=(current_index, current_article, 0))
+    lm.button('Maybe later', use_container_width=True, on_click=read_later)
+    lr.button('Read', use_container_width=True, on_click=handle_article, type="primary",
+              args=(current_index, current_article, 1))
+
+    ### 2. CLUSTERING ####
+    visualization.header(f"You are assigned to cluster {prediction}")
+
+    model.visualize(user_embedding, exemplars,
+                    [("You", st.session_state.user), ("Initial profile", st.session_state.cold_start)])
+    visualization.plotly_chart(model.figure, use_container_width=True)
+
+    # ### 2.2. INTERPRETING ###
+    interpretation.header('Interpretation')
+    start = time.time()
+
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
+    wordcloud = get_wordcloud_from_attention(*results)
+    print(f"Words: {time.time() - start}")
+
+    # Display the generated image:
+    interpretation.image(wordcloud.to_array(), use_column_width="auto")
+
+with alternative_tab:
+    ### 1. CLUSTERING AND SUGGESTION ####
+    cluster_representant = model.interpret(prediction)
+    user_suggestion = model.suggest(cluster_representant, metric=int(config['Clustering']['SuggestionMetric']))
+
+    st.write(f"Your actual cluster is {prediction}. We recommend you to have a look at cluster {user_suggestion[0]}, "
+             f"which is the feed you see by default. Choose any other "
+             f"cluster below.")
+    number = st.number_input('Cluster', min_value=0, max_value=int(config['Clustering']['NoClusters']) - 1,
+                             value=user_suggestion[0])
+
+    # get represenatnt of cluster chosen by user
+    exemplar_embedding, exemplar_index = model.get_cluster_representant(number)
+    # todo get id from suggestion
+    id = get_mind_id_from_index(exemplar_index)
+
+    ### 3. Page Layout ###
+
+    left_column, right_column = st.columns(2)
+    left_column.header('Newsfeed')
+
+
+    ### 3.1 Newsfeed ###
+
+    def button_callback_alternative(article_index, test):
+        st.session_state.article_mask[article_index] = False
+
+
+    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
+                                                            take_top_k=40)[:10]
+
+    article_fields = [left_column.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
+                                         on_click=button_callback_alternative,
+                                         args=(article_index, 0))
+                      for button_index, (article, article_index, score) in
+                      enumerate(article_recommendations)]  # sorry for ugly
+
+    ### 3.2. INTERPRETING ###
+
+    right_column.header('Clustering')
+    model.visualize(user_embedding, exemplars,
+                    [("Actual you", st.session_state.user), ("Feed you are seeing", exemplar_embedding)])
+    right_column.plotly_chart(model.figure)
+
+    # todo these can be precaclulated
+    right_column.header('Interpretation')
+
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id)
+
+    wordcloud = get_wordcloud_from_attention(*results)
+
+    # Display the generated image:
+    right_column.image(wordcloud.to_array(), use_column_width="auto")
