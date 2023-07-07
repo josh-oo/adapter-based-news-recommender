@@ -1,6 +1,7 @@
 import glob
 import json
 import os
+import time
 
 import numpy as np
 import pandas as pd
@@ -80,12 +81,15 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
 
     return generate_wordcloud(freq)
 
+@st.cache_data
+def load_image():
+    return np.array(Image.open(st.session_state['config']['Wordcloud']['MaskPath']))
 
 def generate_wordcloud(word_dict):
-    cloud_mask = np.array(Image.open(st.session_state['config']['Wordcloud']['MaskPath']))
+    # cloud_mask = load_image()
     color_function = get_single_color_func('#3070B3')
 
-    return WordCloud(scale=3, mask = cloud_mask, contour_width = 0, color_func = color_function,
+    return WordCloud(scale=3, contour_width = 0, color_func = color_function, # mask = cloud_mask,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
