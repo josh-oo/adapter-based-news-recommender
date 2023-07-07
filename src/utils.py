@@ -28,7 +28,6 @@ def load_data(path):
 
 @st.cache_data
 def load_headlines():
-    # TODO place recommender system here
     headline_path = st.session_state.config['HeadlinePath']
     return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(st.session_state.config['NoHeadlines']), [1, 3]]
 
@@ -118,5 +117,4 @@ def get_wordcloud_from_attention(scores, word_deviations, personal_deviations, m
         elif mode == 'scaling':
             scaled_headline = [(w, s * score) for score, (w, s) in zip(scores, sorted_headline)]
             c_word_deviations += dict(scaled_headline)
-
     return generate_wordcloud(c_word_deviations)
