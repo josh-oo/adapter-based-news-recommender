@@ -101,9 +101,12 @@ cold_start_tab, recommendation_tab, alternative_tab = st.tabs(["Reset User", "Pe
 
 with cold_start_tab:
     st.write('To start off, choose a user which matches your interest most:')
-
     columns = st.columns(3)
-    buttons = [column.button(f"User {i + 1}", use_container_width=True) for i, column in enumerate(columns)]
+
+    def set_user():
+        st.session_state['clean'] = False
+
+    buttons = [column.button(f"User {i + 1}", use_container_width=True, on_click=set_user) for i, column in enumerate(columns)]
 
     # # todo initialize as 1 in proper dimension
     # if 'user' not in st.session_state:
@@ -113,8 +116,6 @@ with cold_start_tab:
     # for user, button in zip(users, buttons):
     #     if button:
     #         st.session_state.cold_start = user
-
-    # todo clean modell files
 
 with recommendation_tab:
     ### LAYOUT ###

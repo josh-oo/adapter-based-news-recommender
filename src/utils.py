@@ -1,8 +1,6 @@
 import glob
 import json
 import os
-import time
-
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -13,7 +11,7 @@ from wordcloud import get_single_color_func
 
 
 def remove_old_files():
-    if 'clean' not in st.session_state or st.session_state['clean'] == False:
+    if 'clean' not in st.session_state or st.session_state['clean'] is False:
         try:
             os.remove('personal_user_embedding.pt')
             for f in glob.glob("training_samples_*.txt"):
@@ -91,7 +89,8 @@ def set_session_state(emergency_user):
         st.session_state['user'] = st.session_state['cold_start']
     if 'article_mask' not in st.session_state:
         st.session_state['article_mask'] = np.array(
-            [True] * (int(st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
+            [True] * (int(
+                st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
 
 def extract_unread(headlines):
@@ -117,7 +116,7 @@ def get_wordcloud_from_attention(scores, word_deviations, personal_deviations, m
             words = [w for (w, s) in sorted_headline]
             c_word_deviations.update(words)
         elif mode == 'scaling':
-            scaled_headline = [(w, s*score) for score, (w, s) in zip(scores, sorted_headline)]
+            scaled_headline = [(w, s * score) for score, (w, s) in zip(scores, sorted_headline)]
             c_word_deviations += dict(scaled_headline)
 
     return generate_wordcloud(c_word_deviations)
