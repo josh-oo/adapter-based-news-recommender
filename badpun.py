@@ -28,8 +28,7 @@ if 'config' not in st.session_state:
 ### DATA LOADING ###
 @st.cache_resource
 def load_predictor():
-    return ClickPredictor(huggingface_url="josh-oo/news-classifier",
-                          commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
+    return ClickPredictor(huggingface_url="josh-oo/news-classifier")
 
 
 @st.cache_resource
