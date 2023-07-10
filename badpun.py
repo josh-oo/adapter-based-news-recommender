@@ -129,7 +129,7 @@ with cold_start_tab:
                       enumerate(article_recommendations)] 
 
     with col_2: 
-        id = 915
+        id = 511
         u_id = get_mind_id_from_index(id)
         st.button(f"User 2", use_container_width=True, on_click=choose_user, args = (id,), key = "Cold_start_user_2") 
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
@@ -140,7 +140,7 @@ with cold_start_tab:
                       enumerate(article_recommendations)] 
         
     with col_3: 
-        id = 115
+        id = 303
         u_id = get_mind_id_from_index(id)
         st.button(f"User 3", use_container_width=True, on_click=choose_user, args = (id,), key = "Cold_start_user_3") 
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id= u_id,
