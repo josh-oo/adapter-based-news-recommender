@@ -29,7 +29,7 @@ config = st.session_state['config']
 ### DATA LOADING ###
 @st.cache_resource
 def load_predictor():
-    return ClickPredictor(huggingface_url="josh-oo/news-classifier")
+    return ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="c70d86ab3598c32be9466c5303231f5c6e187a2f")
 
 
 @st.cache_resource
