@@ -98,7 +98,7 @@ def extract_unread(headlines):
     return unread_headlines_ind, unread_headlines
 
 
-def get_wordcloud_from_attention(scores, word_deviations, personal_deviations, mode='scaling'):
+def get_wordcloud_from_attention(scores, word_deviations, mode='scaling'):
     c_word_deviations = Counter()
 
     if mode == 'counting':
