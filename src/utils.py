@@ -91,7 +91,13 @@ def set_session_state(emergency_user):
             [True] * (int(
                 st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
-
+def reset_session_state(cold_start_user):
+        st.session_state['cold_start'] = cold_start_user
+        st.session_state['user'] = st.session_state['cold_start']
+        st.session_state['article_mask'] = np.array(
+            [True] * (int(
+                st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
+        
 def extract_unread(headlines):
     unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
     unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])

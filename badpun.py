@@ -2,12 +2,13 @@ import configparser
 import time
 import streamlit as st
 import umap
+import numpy as np
 from scipy.spatial import KDTree
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.KMeansWrapper import KMeansWrapper
 from src.utils import load_headlines, \
     generate_header, set_session_state, extract_unread, \
-    get_wordcloud_from_attention, remove_old_files, get_mind_id_from_index
+    get_wordcloud_from_attention, remove_old_files, get_mind_id_from_index, reset_session_state
 
 ### GENERAL PAGE INFO ###
 
@@ -29,7 +30,7 @@ config = st.session_state['config']
 ### DATA LOADING ###
 @st.cache_resource
 def load_predictor():
-    return ClickPredictor(huggingface_url="josh-oo/news-classifier")
+    return ClickPredictor(huggingface_url="josh-oo/news-classifier", commit_hash="1b0922bb88f293e7d16920e7ef583d05933935a9")
 
 
 @st.cache_resource
@@ -101,13 +102,54 @@ cold_start_tab, recommendation_tab, alternative_tab = st.tabs(["Reset User", "Pe
 
 with cold_start_tab:
     st.write('To start off, choose a user which matches your interest most:')
-    columns = st.columns(3)
+    col_1, col_2, col_3 = st.columns(3)
+    all_headlines = list(headlines.loc[:, 3])
+    all_headlines_ind = np.arange(len(all_headlines))
 
-    def set_user():
+    #buttons = [column.button(f"User {i + 1}", use_container_width=True, on_click=choose_user) for i, column in enumerate(columns)]
+
+    def choose_user(id):
         st.session_state['clean'] = False
+        remove_old_files()
+        reset_session_state(user_embedding[id])
+    
+    def get_u_id(id = 100):
+        click_predictor.get_historic_user_embeddings()
+    
+    
+    with col_1: 
+        id = 112
+        u_id = get_mind_id_from_index(id)
+        st.button(f"User 1", use_container_width=True, on_click=choose_user, args = (id,), key = "Cold_start_user_1") 
+        article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
+                                                            take_top_k=40)[:10]
 
-    buttons = [column.button(f"User {i + 1}", use_container_width=True, on_click=set_user) for i, column in enumerate(columns)]
+        article_fields = [st.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True, key = 'user' + str(1) + 'article' + str(button_index))
+                      for button_index, (article, article_index, score) in
+                      enumerate(article_recommendations)] 
 
+    with col_2: 
+        id = 915
+        u_id = get_mind_id_from_index(id)
+        st.button(f"User 2", use_container_width=True, on_click=choose_user, args = (id,), key = "Cold_start_user_2") 
+        article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
+                                                            take_top_k=40)[:10]
+
+        article_fields = [st.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True, key = 'user' + str(2) + 'article' + str(button_index))
+                      for button_index, (article, article_index, score) in
+                      enumerate(article_recommendations)] 
+        
+    with col_3: 
+        id = 115
+        u_id = get_mind_id_from_index(id)
+        st.button(f"User 3", use_container_width=True, on_click=choose_user, args = (id,), key = "Cold_start_user_3") 
+        article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id= u_id,
+                                                            take_top_k=40)[:10]
+
+        article_fields = [st.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True, key = 'user' + str(3) + 'article' + str(button_index))
+                      for button_index, (article, article_index, score) in
+                      enumerate(article_recommendations)] 
+         
     # # todo initialize as 1 in proper dimension
     # if 'user' not in st.session_state:
     #     st.session_state['user'] = []
@@ -137,7 +179,7 @@ with recommendation_tab:
     current_article = article_recommendations[0][0]
     current_index = article_recommendations[0][1]
 
-
+    print(st.session_state.user)
     def handle_article(article_index, headline, read=1):
         st.session_state.article_mask[article_index] = False
         click_predictor.update_step(headline, read)  # online learning only performed on positive sample
