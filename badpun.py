@@ -108,10 +108,11 @@ with cold_start_tab:
 
     #buttons = [column.button(f"User {i + 1}", use_container_width=True, on_click=choose_user) for i, column in enumerate(columns)]
 
-    def choose_user(id):
+    def choose_user(id, u_id):
         st.session_state['clean'] = False
         remove_old_files()
         reset_session_state(user_embedding[id])
+        click_predictor.set_personal_user_embedding(u_id)
     
     def get_u_id(id = 100):
         click_predictor.get_historic_user_embeddings()
@@ -120,7 +121,7 @@ with cold_start_tab:
     with col_1: 
         id = 112
         u_id = get_mind_id_from_index(id)
-        st.button(f"User 1", use_container_width=True, on_click=choose_user, args = (id,), key = "Cold_start_user_1") 
+        st.button(f"User 1", use_container_width=True, on_click=choose_user, args = (id,u_id), key = "Cold_start_user_1") 
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
                                                             take_top_k=40)[:10]
 
@@ -131,7 +132,7 @@ with cold_start_tab:
     with col_2: 
         id = 511
         u_id = get_mind_id_from_index(id)
-        st.button(f"User 2", use_container_width=True, on_click=choose_user, args = (id,), key = "Cold_start_user_2") 
+        st.button(f"User 2", use_container_width=True, on_click=choose_user, args = (id, u_id), key = "Cold_start_user_2") 
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
                                                             take_top_k=40)[:10]
 
@@ -142,7 +143,7 @@ with cold_start_tab:
     with col_3: 
         id = 303
         u_id = get_mind_id_from_index(id)
-        st.button(f"User 3", use_container_width=True, on_click=choose_user, args = (id,), key = "Cold_start_user_3") 
+        st.button(f"User 3", use_container_width=True, on_click=choose_user, args = (id, u_id), key = "Cold_start_user_3") 
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id= u_id,
                                                             take_top_k=40)[:10]
 
