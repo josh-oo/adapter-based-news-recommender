@@ -174,8 +174,7 @@ with recommendation_tab:
     ### 1. NEWS RECOMMENDATIONS ###
     start = time.time()
 
-    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=40)
-
+    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=2)
     print(f"Get recommendation: {time.time() - start}")
     current_article = article_recommendations[0][0]
     current_index = article_recommendations[0][1]
@@ -246,20 +245,22 @@ with alternative_tab:
     # get represenatnt of cluster chosen by user
 
     # todo get id from suggestion
+    print(model.repr_indeces[number])
     id = get_mind_id_from_index(model.repr_indeces[number])
+    print(id)
 
     def button_callback_alternative(article_index, test):
         st.session_state.article_mask[article_index] = False
 
 
-    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
-                                                            take_top_k=40)[:10]
-
+    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
+                                                            take_top_k=10)
+    print(cluster_recommendations)
     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
                                          args=(article_index, 0))
                       for button_index, (article, article_index, score) in
-                      enumerate(article_recommendations)]  # sorry for ugly
+                      enumerate(cluster_recommendations)]  # sorry for ugly
 
     ### 2.2. Clustering ###
 
