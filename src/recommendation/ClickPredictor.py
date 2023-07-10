@@ -288,7 +288,24 @@ class ClickPredictor():
     """
     return self.model.user_embeddings.weight[-1].detach().numpy()
 
+  def set_personal_user_embedding(self, user_id):
+    """
+    :param
+      user_id : (str) : the mind user_id to initialize the useres embedding
+    :return: personlized embedding in the shape (embedding_dim, 1)
+    """
+    #remove collected training samples
+    for f in glob.glob("training_samples_*.txt"):
+      os.remove(f)
 
+    all_cached_files = os.listdir(self.cache_dir.name)
+    for cached_file in all_cached_files:
+      if cached_file.startswith("CUSTOM"):
+        os.remove(os.path.join(self.cache_dir.name, cached_file))
+
+    user_index = self.user_mapping[user_id]
+    with torch.no_grad():
+        self.model.user_embeddings.weight[-1] = self.model.user_embeddings.weight[user_index]
 
 class RankingModule():
   def __init__(self, click_predictor : ClickPredictor):
