@@ -4,6 +4,8 @@ import streamlit as st
 import umap
 import numpy as np
 from scipy.spatial import KDTree
+
+from src.clustering.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.clustering.KMeansWrapper import KMeansWrapper
 from src.utils import load_headlines, \
@@ -54,19 +56,16 @@ def fit_reducer():
     )
     return fit.fit(user_embedding)
 
-
 @st.cache_resource
-def get_kmeans_model():
+def get_agglomorative_model():
     if config['Dimensionality'] == 'low':
         embeddings = user_embedding
     elif config['Dimensionality'] == 'high':
         embeddings = click_predictor.get_historic_user_embeddings()
     else:
         raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
-    model = KMeansWrapper(embeddings)
-    print(model.repr_indeces)
+    model = AgglomorativeWrapper(embeddings)
     return model
-
 
 click_predictor = load_predictor()
 ranking_module = load_rm()
@@ -80,9 +79,9 @@ def umap_transform():
 
 
 user_embedding = umap_transform()
-model = get_kmeans_model()
+model = get_agglomorative_model()
 
-set_session_state(user_embedding[3])  # todo replace
+set_session_state(user_embedding[112])
 
 headlines = load_headlines()
 unread_headlines_ind, unread_headlines = extract_unread(headlines)
@@ -143,7 +142,6 @@ with recommendation_tab:
     print(f"Get recommendation: {time.time() - start}")
     current_article = article_recommendations[0][0]
     current_index = article_recommendations[0][1]
-    print(article_recommendations)
 
     def handle_article(article_index, headline, read=1):
         st.session_state.article_mask[article_index] = False
@@ -225,9 +223,6 @@ with alternative_tab:
     ### 2.1 Newsfeed ###
     left.header('Newsfeed')
 
-    # get represenatnt of cluster chosen by user
-
-    # todo get id from suggestion
     id = get_mind_id_from_index(model.repr_indeces[number])
 
     def button_callback_alternative(article_index, test):
