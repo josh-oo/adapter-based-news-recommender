@@ -102,63 +102,28 @@ cold_start_tab, recommendation_tab, alternative_tab = st.tabs(["Reset User", "Pe
 
 with cold_start_tab:
     st.write('To start off, choose a user which matches your interest most:')
-    col_1, col_2, col_3 = st.columns(3)
+    user_cols = st.columns(3)
     all_headlines = list(headlines.loc[:, 3])
     all_headlines_ind = np.arange(len(all_headlines))
 
-    #buttons = [column.button(f"User {i + 1}", use_container_width=True, on_click=choose_user) for i, column in enumerate(columns)]
 
     def choose_user(id, u_id):
         st.session_state['clean'] = False
         remove_old_files()
         reset_session_state(user_embedding[id])
         click_predictor.set_personal_user_embedding(u_id)
-    
-    def get_u_id(id = 100):
-        click_predictor.get_historic_user_embeddings()
-    
-    
-    with col_1: 
-        id = 112
+
+    for i, (col, id) in enumerate(zip(user_cols, [112, 511, 303])):
         u_id = get_mind_id_from_index(id)
-        st.button(f"User 1", use_container_width=True, on_click=choose_user, args = (id,u_id), key = "Cold_start_user_1") 
+        col.button(f"User {i+1}", use_container_width=True, on_click=choose_user, args=(id, u_id), type='primary')
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
-                                                            take_top_k=40)[:10]
+                                                                take_top_k=10)
 
-        article_fields = [st.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True, key = 'user' + str(1) + 'article' + str(button_index))
-                      for button_index, (article, article_index, score) in
-                      enumerate(article_recommendations)] 
-
-    with col_2: 
-        id = 511
-        u_id = get_mind_id_from_index(id)
-        st.button(f"User 2", use_container_width=True, on_click=choose_user, args = (id, u_id), key = "Cold_start_user_2") 
-        article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
-                                                            take_top_k=40)[:10]
-
-        article_fields = [st.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True, key = 'user' + str(2) + 'article' + str(button_index))
-                      for button_index, (article, article_index, score) in
-                      enumerate(article_recommendations)] 
-        
-    with col_3: 
-        id = 303
-        u_id = get_mind_id_from_index(id)
-        st.button(f"User 3", use_container_width=True, on_click=choose_user, args = (id, u_id), key = "Cold_start_user_3") 
-        article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id= u_id,
-                                                            take_top_k=40)[:10]
-
-        article_fields = [st.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True, key = 'user' + str(3) + 'article' + str(button_index))
-                      for button_index, (article, article_index, score) in
-                      enumerate(article_recommendations)] 
+        article_fields = [col.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
+                                    key=f"{i}_{button_index}")
+                          for button_index, (article, article_index, score) in
+                          enumerate(article_recommendations)]
          
-    # # todo initialize as 1 in proper dimension
-    # if 'user' not in st.session_state:
-    #     st.session_state['user'] = []
-
-    # todo plug in when ready
-    # for user, button in zip(users, buttons):
-    #     if button:
-    #         st.session_state.cold_start = user
 
 with recommendation_tab:
     ### LAYOUT ###
