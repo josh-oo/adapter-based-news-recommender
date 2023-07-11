@@ -102,7 +102,7 @@ def get_wordcloud_from_attention(scores, word_deviations, mode='scaling'):
     c_word_deviations = Counter()
 
     if mode == 'counting':
-        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.7]
+        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
     elif mode == 'scaling':
         word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
     else:

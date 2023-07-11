@@ -85,7 +85,6 @@ set_session_state(user_embedding[3])  # todo replace
 
 headlines = load_headlines()
 unread_headlines_ind, unread_headlines = extract_unread(headlines)
-
 if config['Dimensionality'] == 'low':
     prediction = model.predict(st.session_state.user)
 elif config['Dimensionality'] == 'high':
@@ -131,7 +130,7 @@ with recommendation_tab:
     ### 1. NEWS RECOMMENDATIONS ###
     start = time.time()
 
-    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=40)
+    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=2)
 
     print(f"Get recommendation: {time.time() - start}")
     current_article = article_recommendations[0][0]
@@ -210,7 +209,7 @@ with alternative_tab:
 
 
     article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
-                                                            take_top_k=40)[:10]
+                                                            take_top_k=10)
 
     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
