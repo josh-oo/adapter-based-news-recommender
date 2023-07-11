@@ -103,8 +103,8 @@ cold_start_tab, recommendation_tab, alternative_tab = st.tabs(["Reset User", "Pe
 with cold_start_tab:
     st.write('To start off, choose a user which matches your interest most:')
     user_cols = st.columns(3)
-    all_headlines = list(headlines.loc[:, 3])
-    all_headlines_ind = np.arange(len(all_headlines))
+    all_headlines = list(headlines.loc[:, 2])
+    all_headlines_ind = list(headlines.loc[:, 0])
 
 
     def choose_user(id, u_id):
@@ -143,15 +143,14 @@ with recommendation_tab:
     print(f"Get recommendation: {time.time() - start}")
     current_article = article_recommendations[0][0]
     current_index = article_recommendations[0][1]
+    print(article_recommendations)
 
-    print(st.session_state.user)
     def handle_article(article_index, headline, read=1):
         st.session_state.article_mask[article_index] = False
         click_predictor.update_step(headline, read)  # online learning only performed on positive sample
 
         user = click_predictor.get_personal_user_embedding().reshape(1, -1)
 
-        # todo is this ok?
         # ok, alternatvie is in the report
         if config['Dimensionality'] == 'low':
             user_rd = reducer.transform(user)[0]
@@ -165,6 +164,25 @@ with recommendation_tab:
     def read_later():
         st.session_state.article_mask[current_index] = False
 
+
+    # def markup_words():
+    #     words = click_predictor.calculate_scores([current_article])[1][0]
+    #     print(words)
+    #     max_alpha = 0.8
+    #     highlighted_text = []
+    #     for word in words:
+    #         weight = words[word]
+    #         if weight is not None:
+    #             if weight >= 0:
+    #                 highlighted_text.append('<span style="background-color:rgba(135,206,250,' + str(
+    #                     weight / max_alpha) + ');">' + word + '</span>')
+    #             else:
+    #                 highlighted_text.append('<span style="background-color:rgba(220,20,60,' + str(
+    #                     weight / max_alpha) + ');">' + word + '</span>')
+    #         else:
+    #             highlighted_text.append(word)
+    #     return ' '.join(highlighted_text)
+    # print(markup_words())
 
     news_tinder.subheader(f"[{headlines.loc[current_index, 1].capitalize()}] :blue[{current_article}]")
 
@@ -186,7 +204,7 @@ with recommendation_tab:
     interpretation.header('Interpretation')
     start = time.time()
 
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 2]))
     wordcloud = get_wordcloud_from_attention(*results)
     print(f"Words: {time.time() - start}")
 
@@ -210,9 +228,7 @@ with alternative_tab:
     # get represenatnt of cluster chosen by user
 
     # todo get id from suggestion
-    print(model.repr_indeces[number])
     id = get_mind_id_from_index(model.repr_indeces[number])
-    print(id)
 
     def button_callback_alternative(article_index, test):
         st.session_state.article_mask[article_index] = False
@@ -220,7 +236,6 @@ with alternative_tab:
 
     cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
                                                             take_top_k=10)
-    print(cluster_recommendations)
     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
                                          args=(article_index, 0))
@@ -238,7 +253,7 @@ with alternative_tab:
     # todo these can be precaclulated
     right.header('Interpretation')
 
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id)
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=id)
 
     wordcloud = get_wordcloud_from_attention(*results)
 

@@ -29,7 +29,7 @@ def load_data(path):
 @st.cache_data
 def load_headlines():
     headline_path = st.session_state.config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(st.session_state.config['NoHeadlines']), [1, 3]]
+    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(st.session_state.config['NoHeadlines']), :]
 
 
 @st.cache_data
@@ -100,7 +100,7 @@ def reset_session_state(cold_start_user):
         
 def extract_unread(headlines):
     unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
-    unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
+    unread_headlines = list(headlines.loc[:, 2][st.session_state.article_mask])
     return unread_headlines_ind, unread_headlines
 
 
