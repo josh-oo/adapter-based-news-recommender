@@ -8,7 +8,6 @@ import sys
 
 from src.clustering.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
-from src.clustering.KMeansWrapper import KMeansWrapper
 from src.utils import load_headlines, \
     generate_header, set_session_state, extract_unread, \
     get_wordcloud_from_attention, remove_old_files, get_mind_id_from_index, reset_session_state
@@ -30,7 +29,7 @@ if 'config' not in st.session_state:
         if sys.argv[1] not in ['high', 'low']:
             raise ValueError(f"{sys.argv[1]} is not a valid command line parameter. Options are 'high' and 'low'")
         config['DEFAULT']['Dimensionality'] = sys.argv[1]
-        print(config['DEFAULT']['Dimensionality'])
+        print(f"Chosen dimensionality: {config['DEFAULT']['Dimensionality']}")
     st.session_state['config'] = config[config['DEFAULT']['Dimensionality']]
 
 config = st.session_state['config']
@@ -112,15 +111,15 @@ with cold_start_tab:
     all_headlines_ind = list(headlines.loc[:, 0])
 
 
-    def choose_user(id, u_id):
+    def choose_user(user_index, u_id):
         st.session_state['clean'] = False
         remove_old_files()
-        reset_session_state(user_embedding[id])
+        reset_session_state(user_embedding[user_index])
         click_predictor.set_personal_user_embedding(u_id)
 
-    for i, (col, id) in enumerate(zip(user_cols, [112, 511, 303])):
-        u_id = get_mind_id_from_index(id)
-        col.button(f"User {i+1}", use_container_width=True, on_click=choose_user, args=(id, u_id), type='primary')
+    for i, (col, user_index) in enumerate(zip(user_cols, [112, 511, 303])):
+        u_id = get_mind_id_from_index(user_index)
+        col.button(f"User {i+1}", use_container_width=True, on_click=choose_user, args=(user_index, u_id), type='primary')
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
                                                                 take_top_k=10)
 
@@ -218,7 +217,6 @@ with recommendation_tab:
 with alternative_tab:
     ### 1. CLUSTERING AND SUGGESTION ####
     left_column, right_column = st.columns(2)
-
     left_column.write(f"Your actual cluster is {prediction}. Choose any other cluster below.")
     number = right_column.number_input('Cluster', min_value=0, max_value=int(config['NoClusters']) - 1,
                              value=prediction)
@@ -229,13 +227,13 @@ with alternative_tab:
     ### 2.1 Newsfeed ###
     left.header('Newsfeed')
 
-    id = get_mind_id_from_index(model.repr_indeces[number])
+    user_index = get_mind_id_from_index(model.repr_indeces[number])
 
     def button_callback_alternative(article_index, test):
         st.session_state.article_mask[article_index] = False
 
 
-    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
+    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=user_index,
                                                             take_top_k=10)
     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
@@ -254,7 +252,7 @@ with alternative_tab:
     # todo these can be precaclulated
     right.header('Interpretation')
 
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=id)
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
 
     wordcloud = get_wordcloud_from_attention(*results)
 

@@ -23,7 +23,7 @@ class ClickPredictor():
     config = BertConfigAdapters.from_pretrained(huggingface_url, revision=commit_hash)
     self.model = BertForSequenceClassificationAdapters.from_pretrained(huggingface_url, revision=commit_hash)
     self.tokenizer = AutoTokenizer.from_pretrained(huggingface_url, revision=commit_hash)
-    
+
     #load user mapping
     self.user_mapping = {}
     user_mapping_file = hf_hub_download(repo_id=huggingface_url, filename="user_mapping.json", revision=commit_hash)
@@ -50,7 +50,7 @@ class ClickPredictor():
     self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=0.1)
     self.positive_training_sample_path = "training_samples_positive.txt"
     self.negative_training_sample_path = "training_samples_negative.txt"
-        
+
     self.device = device
     if self.device is not None:
       self.model.to(device)
@@ -152,13 +152,12 @@ class ClickPredictor():
         outputs = self.model(**inputs, users=user_index, output_attentions=True)
         probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
         scores = probs[:,1].detach().numpy()
-        attentions = outputs.attentions[-1].squeeze(dim=0)
-
+        attentions = outputs.attentions[-1]
         for i, score, attention in zip(remaining_original_indices,scores,attentions):
           all_scores[i] = score.item()
           #we are only interested in the cls token as it is used in our pooling step
           all_attentions[i] = attention[:,0].numpy()
-    
+
           cache_file = user_id + "#" + str(hash(headlines[i])) + ".npz"
           np.savez(os.path.join(self.cache_dir.name, cache_file), score=all_scores[i], attentions=all_attentions[i])
 
@@ -178,9 +177,8 @@ class ClickPredictor():
       personal_deviations (List[float]) : a list of floats indicating the deviation of the personal click probability compared to the non-personalized net
     """
     assert user_id == "CUSTOM" or user_id in self.user_mapping.keys(), "Given user id is not available"
-
     personal_scores, personal_attention = self._get_score_and_attentions(headlines,user_id)
-      
+
     personal_deviations = None
     word_deviations = None
 
@@ -192,7 +190,6 @@ class ClickPredictor():
       inputs = self.tokenizer(headlines, return_tensors="pt", padding='longest')
       for i, headline in enumerate(inputs['input_ids']):
         current_tokens = self.tokenizer.convert_ids_to_tokens(headline)
-
         word_deviations.append(self._extract_word_deviations(current_tokens,non_personal_attentions[i], personal_attention[i]))
 
       #json_object = json.dumps({'personal_scores':personal_scores.tolist(), 'word_deviations':word_deviations, 'personal_deviations':personal_deviations.tolist()})
@@ -333,7 +330,7 @@ class RankingModule():
     assert len(headlines) > take_top_k
     assert exploration_ratio >= 0.0 and exploration_ratio <= 1.0
     assert len(headlines) == len(ids)
-    
+
     scores, _, _ = self.click_predictor.calculate_scores(headlines, user_id, compare=False) #compare is set to True to trigger caching
 
     headlines_sorted = [x for _, x in sorted(zip(scores, headlines), reverse=True)]
@@ -347,7 +344,7 @@ class RankingModule():
 
     selected_headlines = []
     while len(selected_headlines) < k_best and len(headlines_sorted) > 0:
-      candidate, id, score = headlines_ids_sorted.pop(0)
+      candidate, index, score = headlines_ids_sorted.pop(0)
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
@@ -358,7 +355,7 @@ class RankingModule():
           break
 
       if similar_headline_already_selected == False:
-        selected_headlines.append((candidate, id, score))
+        selected_headlines.append((candidate, index, score))
 
     #reverse headlines for low ranked articles
     headlines_ids_sorted = reversed(headlines_ids_sorted)
@@ -366,7 +363,7 @@ class RankingModule():
     #fill the remaining space with exploration headlines
     while len(selected_headlines) < take_top_k:
       try:
-        candidate, id, score = headlines_ids_sorted.pop(0)
+        candidate, index, score = headlines_ids_sorted.pop(0)
       except Exception:
         break
 
@@ -379,6 +376,6 @@ class RankingModule():
           break
 
       if similar_headline_already_selected == False:
-        selected_headlines.append((candidate, id, score))
+        selected_headlines.append((candidate, index, score))
 
     return selected_headlines

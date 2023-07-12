@@ -47,9 +47,9 @@ def load_normalized_category_frequencies(path, user_mapping):
 
 
 @st.cache_data
-def get_mind_id_from_index(id):
+def get_mind_id_from_index(index):
     user_mapping = json.load(open(st.session_state.config['IdMappingPath']))
-    return list(user_mapping.keys())[list(user_mapping.values()).index(id)]
+    return list(user_mapping.keys())[list(user_mapping.values()).index(index)]
 
 
 def generate_wordcloud_from_user_category(labels, cluster_id):

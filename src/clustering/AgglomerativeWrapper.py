@@ -91,7 +91,7 @@ class AgglomorativeWrapper:
         fig.update_layout(height=800)  # todo configure
         self.figure = fig
 
-    def get_exemplar_of_cluster(self, id):
-        if id > len(self.representants):
+    def get_exemplar_of_cluster(self, index):
+        if index > len(self.representants):
             raise ValueError
-        return self.representants[id], self.repr_indeces[id]
+        return self.representants[index], self.repr_indeces[index]
