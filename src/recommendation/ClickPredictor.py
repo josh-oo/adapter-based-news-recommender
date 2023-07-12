@@ -198,7 +198,30 @@ class ClickPredictor():
 
     return np.array(all_scores), all_relevancies
 
-  def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM", compare : bool = True):
+def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM", compare : bool = True, batch_size : int = None):
+    """
+    calculate scores for a list of headlines for a given user
+    :param
+      headlines : (List[str]) : the list of headlines
+      user_id (str) : either the user_id corresponding to the MIND dataset (for example) to calculate scores for historic users
+                      or "CUSTOM" to calculate scores for the current new user
+    :return
+      scores : (List[float]) : a score for each headline specifying a probability for a click event (1.0 = 100%)
+      word_level_scores (List[dict]): a list of dicts containing the headlines words and a relevancy score (between [0,1]) obtained from the lrp model
+    """
+    if batch_size is None:
+        return self._calculate_scores(headlines=headlines, user_id=user_id)
+    else:
+        batches = [headlines[i:i + batch_size] for i in range(0, len(headlines), batch_size)]
+        scores = []
+        word_relevancies = []
+        for batch in batches:
+            current_scores, current_word_relevancies = self._calculate_scores(headlines=headlines, user_id=user_id)
+            scores.extend(current_scores)
+            word_relevancies.extend(current_word_relevancies)
+        return scores, word_relevancies
+
+  def _calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM"):
     """
     calculate scores for a list of headlines for a given user
     :param
@@ -212,7 +235,7 @@ class ClickPredictor():
     assert user_id == "CUSTOM" or user_id in self.user_mapping.keys(), "Given user id is not available"
 
     scores, relevancy_values = self._get_score_and_relevancies(headlines,user_id)
-      
+
     word_relevancies = []
 
     inputs = self.tokenizer(headlines)
