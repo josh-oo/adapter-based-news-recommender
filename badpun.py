@@ -4,6 +4,7 @@ import streamlit as st
 import umap
 import numpy as np
 from scipy.spatial import KDTree
+import sys
 
 from src.clustering.AgglomerativeWrapper import AgglomorativeWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
@@ -25,6 +26,11 @@ remove_old_files()
 if 'config' not in st.session_state:
     config = configparser.ConfigParser()
     config.read('config.ini')
+    if len(sys.argv) > 1:
+        if sys.argv[1] not in ['high', 'low']:
+            raise ValueError(f"{sys.argv[1]} is not a valid command line parameter. Options are 'high' and 'low'")
+        config['DEFAULT']['Dimensionality'] = sys.argv[1]
+        print(config['DEFAULT']['Dimensionality'])
     st.session_state['config'] = config[config['DEFAULT']['Dimensionality']]
 
 config = st.session_state['config']
