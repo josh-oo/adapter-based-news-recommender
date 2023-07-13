@@ -198,7 +198,7 @@ class ClickPredictor():
 
     return np.array(all_scores), all_relevancies
 
-def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM", compare : bool = True, batch_size : int = None):
+  def calculate_scores(self, headlines : List[str], user_id : str = "CUSTOM", batch_size : int = None):
     """
     calculate scores for a list of headlines for a given user
     :param
@@ -359,7 +359,7 @@ class RankingModule():
     self.click_predictor = click_predictor
     self.similarity_scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
-  def rank_headlines(self, ids : List[int], headlines : List[str], user_id : str = "CUSTOM", take_top_k : int = 10, exploration_ratio : float = 0.2):
+  def rank_headlines(self, ids : List[int], headlines : List[str], user_id : str = "CUSTOM", take_top_k : int = 10, exploration_ratio : float = 0.2, batch_size=None):
     """
     get the k top ranked (distinct) articles including some exploration articles
     :param
@@ -375,7 +375,7 @@ class RankingModule():
     assert exploration_ratio >= 0.0 and exploration_ratio <= 1.0
     assert len(headlines) == len(ids)
     
-    scores, _ = self.click_predictor.calculate_scores(headlines, user_id, compare=False) #compare is set to True to trigger caching
+    scores, _ = self.click_predictor.calculate_scores(headlines, user_id, batch_size=batch_size)
 
     headlines_sorted = [x for _, x in sorted(zip(scores, headlines), reverse=True)]
     ids_sorted =[x for _, x in sorted(zip(scores, ids), reverse=True)]
