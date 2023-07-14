@@ -9,6 +9,7 @@ from src.utils import load_headlines, \
     generate_header, set_session_state, extract_unread, \
     get_wordcloud_from_attention, remove_old_files, get_mind_id_from_index
 
+BATCH = 50
 ### GENERAL PAGE INFO ###
 
 st.set_page_config(
@@ -130,7 +131,8 @@ with recommendation_tab:
     ### 1. NEWS RECOMMENDATIONS ###
     start = time.time()
 
-    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=2)
+    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=2,
+                                                            batch_size=BATCH)
 
     print(f"Get recommendation: {time.time() - start}")
     current_article = article_recommendations[0][0]
@@ -178,7 +180,7 @@ with recommendation_tab:
     interpretation.header('Interpretation')
     start = time.time()
 
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]))
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), batch_size=BATCH)
     wordcloud = get_wordcloud_from_attention(*results)
     print(f"Words: {time.time() - start}")
 
@@ -209,7 +211,7 @@ with alternative_tab:
 
 
     article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
-                                                            take_top_k=10)
+                                                            take_top_k=10, batch_size=BATCH)
 
     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
@@ -228,7 +230,7 @@ with alternative_tab:
     # todo these can be precaclulated
     right.header('Interpretation')
 
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id)
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id, batch_size=BATCH)
 
     wordcloud = get_wordcloud_from_attention(*results)
 
