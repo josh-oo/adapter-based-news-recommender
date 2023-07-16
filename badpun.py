@@ -225,16 +225,17 @@ with alternative_tab:
     ### 2.3. INTERPRETATION ###
     right.header('Interpretation')
 
-    if config['WordcloudGeneration'] == 'load':
+    if config['WordcloudGeneration'] == 'load' and config['Dimensionality'] == 'high':
         right.image(f"media/{config['Dimensionality']}/attention/scaling_{number}.svg", use_column_width="auto")
-    elif config['WordcloudGeneration'] == 'calculate':
+
+    else:
         results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
 
         wordcloud = get_wordcloud_from_attention(*results)
 
         # Display the generated image:
         right.image(wordcloud.to_array(), use_column_width="auto")
-#
+
 # for number in range(int(config['NoClusters'])):
 #     user_index = get_mind_id_from_index(model.repr_indeces[number])
 #
@@ -242,9 +243,9 @@ with alternative_tab:
 #
 #     wordcloud_scaling = get_wordcloud_from_attention(*results, mode='scaling')
 #     f = open(f"media/{config['Dimensionality']}/attention/scaling_{number}.svg", "w+")
-#     f.write(wordcloud_scaling.to_svg())
+#     f.write(wordcloud_scaling.to_svg(embed_font=True))
 #     f.close()
 #     wordcloud_counting = get_wordcloud_from_attention(*results, mode='counting')
 #     f = open(f"media/{config['Dimensionality']}/attention/counting_{number}.svg", "w+")
-#     f.write(wordcloud_counting.to_svg())
+#     f.write(wordcloud_counting.to_svg(embed_font=True))
 #     f.close()
