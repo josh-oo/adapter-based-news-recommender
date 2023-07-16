@@ -201,66 +201,61 @@ with recommendation_tab:
     # Display the generated image:
     interpretation.image(wordcloud.to_array(), use_column_width="auto")
 
-# with alternative_tab:
-#     ### 1. CLUSTERING AND SUGGESTION ####
-#     left_column, right_column = st.columns(2)
+with alternative_tab:
+    ### 1. CLUSTERING AND SUGGESTION ####
+    left_column, right_column = st.columns(2)
+
+    left_column.write(f"Your actual cluster is {prediction}. Choose any other cluster below.")
+    number = right_column.number_input('Cluster', min_value=0, max_value=int(config['NoClusters']) - 1,
+                             value=prediction)
+
+    ### 2. PAGE LAYOUT ###
+    left, middle, right = st.columns(3)
+
+    ### 2.1 Newsfeed ###
+    left.header('Newsfeed')
+
+    def button_callback_alternative(article_index, test):
+        st.session_state.article_mask[article_index] = False
+
+
+    with open(f"media/{config['Dimensionality']}/lrp/headlines_{number}.txt") as file:
+        recommended_headlines = [int(line.rstrip()) for line in file]
+
+    cluster_recommendations = [(headlines.loc[:, 2][article_index], article_index) for article_index in recommended_headlines if st.session_state.article_mask[article_index] == True]
+    article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
+                                         on_click=button_callback_alternative,
+                                         args=(article_index, 0))
+                      for button_index, (article, article_index) in
+                      enumerate(cluster_recommendations[:10])]  # sorry for ugly
+
+    ### 2.2. Clustering ###
+
+    middle.header('Clustering')
+    model.visualize(user_embedding, exemplars,
+                    [("Actual you", st.session_state.user), ("Feed you are seeing", user_embedding[model.repr_indeces[number]])])
+    middle.plotly_chart(model.figure)
+
+    ### 2.3. INTERPRETATION ###
+    right.header('Interpretation')
+
+    # Display the generated image:
+    right.image(f"media/{config['Dimensionality']}/lrp/scaling_{number}.svg", use_column_width="auto")
 #
-#     left_column.write(f"Your actual cluster is {prediction}. Choose any other cluster below.")
-#     number = right_column.number_input('Cluster', min_value=0, max_value=int(config['NoClusters']) - 1,
-#                              value=prediction)
-#
-#     ### 2. PAGE LAYOUT ###
-#     left, middle, right = st.columns(3)
-#
-#     ### 2.1 Newsfeed ###
-#     left.header('Newsfeed')
-#
+# for number in range(int(config['NoClusters'])):
 #     user_index = get_mind_id_from_index(model.repr_indeces[number])
-#
-#     def button_callback_alternative(article_index, test):
-#         st.session_state.article_mask[article_index] = False
-#
-#
 #     cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=user_index,
-#                                                             take_top_k=10, batch_size=BATCH)
-#     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
-#                                          on_click=button_callback_alternative,
-#                                          args=(article_index, 0))
-#                       for button_index, (article, article_index, score) in
-#                       enumerate(cluster_recommendations)]  # sorry for ugly
+#                                                             batch_size=BATCH, take_top_k=299)
+#     f = open(f"media/{config['Dimensionality']}/lrp/headlines_{number}.txt", "w+")
+#     for (article, article_index, score) in cluster_recommendations:
+#         f.write(f"{article_index}\n")
+#     results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
 #
-#     ### 2.2. Clustering ###
-#
-#     middle.header('Clustering')
-#     model.visualize(user_embedding, exemplars,
-#                     [("Actual you", st.session_state.user), ("Feed you are seeing", user_embedding[model.repr_indeces[number]])])
-#     middle.plotly_chart(model.figure)
-#
-#     ### 2.3. INTERPRETATION ###
-#     # todo these can be precaclulated
-#     right.header('Interpretation')
-#
-#     results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index, batch_size=BATCH)
-#
-#     wordcloud = get_wordcloud_from_attention(*results)
-#
-#     # Display the generated image:
-#     right.image(wordcloud.to_array(), use_column_width="auto")
-
-for number in range(int(config['NoClusters'])):
-    user_index = get_mind_id_from_index(model.repr_indeces[number])
-    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=user_index,
-                                                            take_top_k=10, batch_size=BATCH)
-    f = open(f"media/{config['Dimensionality']}/lrp/headlines_{number}.txt", "w+")
-    for (article, article_index, score) in cluster_recommendations:
-        f.write(f"{article_index}\n")
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
-
-    wordcloud_scaling = get_wordcloud_from_attention(*results, mode='scaling')
-    f = open(f"media/{config['Dimensionality']}/lrp/scaling_{number}.svg", "w+")
-    f.write(wordcloud_scaling.to_svg())
-    f.close()
-    wordcloud_counting = get_wordcloud_from_attention(*results, mode='counting')
-    f = open(f"media/{config['Dimensionality']}/lrp/counting_{number}.svg", "w+")
-    f.write(wordcloud_counting.to_svg())
-    f.close()
+#     wordcloud_scaling = get_wordcloud_from_attention(*results, mode='scaling')
+#     f = open(f"media/{config['Dimensionality']}/lrp/scaling_{number}.svg", "w+")
+#     f.write(wordcloud_scaling.to_svg())
+#     f.close()
+#     wordcloud_counting = get_wordcloud_from_attention(*results, mode='counting')
+#     f = open(f"media/{config['Dimensionality']}/lrp/counting_{number}.svg", "w+")
+#     f.write(wordcloud_counting.to_svg())
+#     f.close()
