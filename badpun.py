@@ -168,25 +168,6 @@ with recommendation_tab:
         st.session_state.article_mask[current_index] = False
 
 
-    # def markup_words():
-    #     words = click_predictor.calculate_scores([current_article])[1][0]
-    #     print(words)
-    #     max_alpha = 0.8
-    #     highlighted_text = []
-    #     for word in words:
-    #         weight = words[word]
-    #         if weight is not None:
-    #             if weight >= 0:
-    #                 highlighted_text.append('<span style="background-color:rgba(135,206,250,' + str(
-    #                     weight / max_alpha) + ');">' + word + '</span>')
-    #             else:
-    #                 highlighted_text.append('<span style="background-color:rgba(220,20,60,' + str(
-    #                     weight / max_alpha) + ');">' + word + '</span>')
-    #         else:
-    #             highlighted_text.append(word)
-    #     return ' '.join(highlighted_text)
-    # print(markup_words())
-
     news_tinder.subheader(f"[{headlines.loc[current_index, 1].capitalize()}] :blue[{current_article}]")
 
     ll, lm, lr = news_tinder.columns(3, gap='large')
