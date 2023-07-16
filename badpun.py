@@ -56,7 +56,7 @@ def fit_reducer():
     return fit.fit(user_embedding)
 
 @st.cache_resource
-def get_agglomorative_model():
+def get_model():
     if config['Dimensionality'] == 'low':
         embeddings = user_embedding
         model = AgglomorativeWrapper(config, embeddings)
@@ -79,7 +79,7 @@ def umap_transform():
 
 
 user_embedding = umap_transform()
-model = get_agglomorative_model()
+model = get_model()
 
 set_session_state(user_embedding[112])
 
