@@ -195,6 +195,14 @@ class ClickPredictor():
       #json_object = json.dumps({'personal_scores':personal_scores.tolist(), 'word_deviations':word_deviations, 'personal_deviations':personal_deviations.tolist()})
       #with open(os.path.join(self.cache_dir.name, cache_file), "w") as outfile:
       #  outfile.write(json_object)
+      
+    #cache highest and lowest rank for online learning
+    current_highest_ranking = np.argmax(personal_scores)
+    current_lowest_ranking = np.argmin(personal_scores)
+    with open(os.path.join(self.cache_dir.name, "highest_ranking.txt"), "w") as highest:
+        highest.write(headlines[current_highest_ranking])
+    with open(os.path.join(self.cache_dir.name, "lowest_ranking.txt"), "w") as lowest:
+        lowest.write(headlines[current_lowest_ranking])
 
     return personal_scores, word_deviations, personal_deviations
 
@@ -211,23 +219,42 @@ class ClickPredictor():
     with open(path, "a") as sample_file:
         sample_file.write(new_headline + "\n")
 
-    #perform online learning step only if we got a new positive sample
-    if new_label != 1:
-        return
-
-    #load all available negative samples
+    #load all stored negative samples
     all_negative_samples = []
     if os.path.exists(self.negative_training_sample_path):
         with open(self.negative_training_sample_path) as f:
             all_negative_samples = [line.rstrip() for line in f]
-    num_negative_samples = len(all_negative_samples)
-    if num_negative_samples == 0:
+            
+    #load all stored positive samples
+    all_positive_samples = []
+    if os.path.exists(self.positive_training_sample_path):
+        with open(self.positive_training_sample_path) as f:
+            all_positive_samples = [line.rstrip() for line in f]
+            
+    if len(all_negative_samples) == 0 or len(all_positive_samples) == 0:
+        if len(all_positive_samples) == 0:
+            highest_ranking_path = os.path.join(self.cache_dir.name, "highest_ranking.txt")
+            if os.path.exists(highest_ranking_path):
+                with open(highest_ranking_path) as f:
+                  all_positive_samples = [line.rstrip() for line in f]
+        if len(all_negative_samples) == 0:
+            lowest_ranking_path = os.path.join(self.cache_dir.name, "lowest_ranking.txt")
+            if os.path.exists(lowest_ranking_path):
+                with open(lowest_ranking_path) as f:
+                  all_negative_samples = [line.rstrip() for line in f]
+            
+    #if there are still no samples, we have to skip this learning step
+    if len(all_negative_samples) == 0 or len(all_positive_samples) == 0:
         return
 
     #sample k=4 negative samples
     k=4
-    negative_samples = random.choices(all_negative_samples, k=k)
-    all_samples = negative_samples + [new_headline]
+    negative_samples = all_negative_samples[:k]
+    if len(negative_samples) < k:
+        #if there aer not enough negative samples we will oversample from the already existing negative samples
+        negative_samples = random.choices(negative_samples, k=k)
+    positive_sample = all_positive_samples[-1] #we will always use the last positive sample
+    all_samples = negative_samples + [positive_sample]
 
     random_permutation = np.random.permutation(k + 1)
     all_samples = np.array(all_samples)[random_permutation]
