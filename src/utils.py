@@ -1,18 +1,17 @@
 import glob
 import json
 import os
-
 import numpy as np
 import pandas as pd
 import streamlit as st
-from sklearn.preprocessing import StandardScaler
 from wordcloud import WordCloud
 from collections import Counter
 from wordcloud import STOPWORDS
+from wordcloud import get_single_color_func
 
 
 def remove_old_files():
-    if 'clean' not in st.session_state:
+    if 'clean' not in st.session_state or st.session_state['clean'] is False:
         try:
             os.remove('personal_user_embedding.pt')
             for f in glob.glob("training_samples_*.txt"):
@@ -23,25 +22,14 @@ def remove_old_files():
 
 
 @st.cache_data
-def fit_standardizer(embeddings):
-    return StandardScaler().fit(embeddings)
-
-
-@st.cache_data
-def standardize_data(_scaler, embeddings):
-    return _scaler.transform(embeddings)
-
-
-@st.cache_data
 def load_data(path):
     return np.load(path)
 
 
 @st.cache_data
-def load_headlines(_config):
-    # TODO place recommender system here
-    headline_path = _config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(_config['NoHeadlines']), [1, 3]]
+def load_headlines():
+    headline_path = st.session_state.config['HeadlinePath']
+    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(st.session_state.config['NoHeadlines']), :]
 
 
 @st.cache_data
@@ -59,16 +47,15 @@ def load_normalized_category_frequencies(path, user_mapping):
 
 
 @st.cache_data
-def get_mind_id_from_index(id):
-    user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
-    return list(user_mapping.keys())[list(user_mapping.values()).index(id)]
+def get_mind_id_from_index(index):
+    user_mapping = json.load(open(st.session_state.config['IdMappingPath']))
+    return list(user_mapping.keys())[list(user_mapping.values()).index(index)]
 
 
 def generate_wordcloud_from_user_category(labels, cluster_id):
-    # todo @Mara
     # Opening JSON file
-    user_mapping = json.load(open(st.session_state.config['DATA']['IdMappingPath']))
-    user_category_frequ = load_normalized_category_frequencies(st.session_state.config['DATA']['UserCategoriesPath'],
+    user_mapping = json.load(open(st.session_state.config['IdMappingPath']))
+    user_category_frequ = load_normalized_category_frequencies(st.session_state.config['UserCategoriesPath'],
                                                                user_mapping)
 
     index_current_cluster_points = (labels == cluster_id).nonzero()[0]
@@ -80,15 +67,15 @@ def generate_wordcloud_from_user_category(labels, cluster_id):
     return generate_wordcloud(freq)
 
 
-@st.cache_data
 def generate_wordcloud(word_dict):
-    return WordCloud(scale=3,
+    color_function = get_single_color_func('#3070B3')
+    return WordCloud(scale=3, contour_width=0, color_func=color_function, width=200, height=250,
                      background_color="rgba(255, 255, 255, 0)", mode="RGBA") \
         .generate_from_frequencies(word_dict)
 
 
 def generate_header():
-    l_small, l_right = st.columns([1, 4])
+    l_small, l_right = st.columns([1, 5])
     l_small.image('media/logo_dark.png', use_column_width='always')
     l_right.title('Balanced Article Discovery')
     l_right.title('through Playful User Nudging')
@@ -101,29 +88,39 @@ def set_session_state(emergency_user):
         st.session_state['user'] = st.session_state['cold_start']
     if 'article_mask' not in st.session_state:
         st.session_state['article_mask'] = np.array(
-            [True] * (int(st.session_state.config['DATA'][
-                              'NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
+            [True] * (int(
+                st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
-
-@st.cache_data
-def preprocess_word_frequencies(word_deviations):
-    c_word_deviations = Counter()
-    # todo speed up
-    for i, headline_counter in enumerate(word_deviations):
-        sorted_headline = Counter(headline_counter).most_common(3)
-        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS and len(w) >= 3]
-        c_word_deviations += dict(sorted_headline)
-    return c_word_deviations
-
+def reset_session_state(cold_start_user):
+        st.session_state['cold_start'] = cold_start_user
+        st.session_state['user'] = st.session_state['cold_start']
+        st.session_state['article_mask'] = np.array(
+            [True] * (int(
+                st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
 def extract_unread(headlines):
     unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
-    unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
+    unread_headlines = list(headlines.loc[:, 2][st.session_state.article_mask])
     return unread_headlines_ind, unread_headlines
 
 
-def get_wordcloud_from_attention(scores, word_deviations, personal_deviations):
-    word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
+def get_wordcloud_from_attention(scores, word_deviations, personal_deviations, mode='scaling'):
+    c_word_deviations = Counter()
 
-    c_word_deviations = preprocess_word_frequencies(word_deviations)
+    if mode == 'counting':
+        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.6]
+    elif mode == 'scaling':
+        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
+    else:
+        raise ValueError("Not a valid mode")
+
+    for i, headline_counter in enumerate(word_deviations):
+        sorted_headline = Counter(headline_counter).most_common(3)
+        sorted_headline = [(w, s) for (w, s) in sorted_headline if w not in STOPWORDS and len(w) >= 3]
+        if mode == 'counting':
+            words = [w for (w, s) in sorted_headline]
+            c_word_deviations.update(words)
+        elif mode == 'scaling':
+            scaled_headline = [(w, s * score) for score, (w, s) in zip(scores, sorted_headline)]
+            c_word_deviations += dict(scaled_headline)
     return generate_wordcloud(c_word_deviations)
