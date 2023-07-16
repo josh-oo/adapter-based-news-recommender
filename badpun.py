@@ -69,7 +69,7 @@ def get_agglomorative_model():
         embeddings = click_predictor.get_historic_user_embeddings()
     else:
         raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
-    model = AgglomorativeWrapper(embeddings)
+    model = AgglomorativeWrapper(config, embeddings)
     return model
 
 click_predictor = load_predictor()
@@ -239,3 +239,17 @@ with alternative_tab:
 
     # Display the generated image:
     right.image(wordcloud.to_array(), use_column_width="auto")
+#
+# for number in range(int(config['NoClusters'])):
+#     user_index = get_mind_id_from_index(model.repr_indeces[number])
+#
+#     results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
+#
+#     wordcloud_scaling = get_wordcloud_from_attention(*results, mode='scaling')
+#     f = open(f"media/{config['Dimensionality']}/attention/scaling_{number}.svg", "w+")
+#     f.write(wordcloud_scaling.to_svg())
+#     f.close()
+#     wordcloud_counting = get_wordcloud_from_attention(*results, mode='counting')
+#     f = open(f"media/{config['Dimensionality']}/attention/counting_{number}.svg", "w+")
+#     f.write(wordcloud_counting.to_svg())
+#     f.close()
