@@ -7,6 +7,7 @@ from scipy.spatial import KDTree
 import sys
 
 from src.clustering.AgglomerativeWrapper import AgglomorativeWrapper
+from src.clustering.KMeansWrapper import KMeansWrapper
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
 from src.utils import load_headlines, \
     generate_header, set_session_state, extract_unread, \
@@ -65,11 +66,13 @@ def fit_reducer():
 def get_agglomorative_model():
     if config['Dimensionality'] == 'low':
         embeddings = user_embedding
+        model = AgglomorativeWrapper(config, embeddings)
     elif config['Dimensionality'] == 'high':
         embeddings = click_predictor.get_historic_user_embeddings()
+        model = KMeansWrapper(embeddings)
     else:
         raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
-    model = AgglomorativeWrapper(config, embeddings)
+    #model = AgglomorativeWrapper(embeddings)
     return model
 
 click_predictor = load_predictor()
@@ -158,9 +161,9 @@ with recommendation_tab:
         if config['Dimensionality'] == 'low':
             user_rd = reducer.transform(user)[0]
         elif config['Dimensionality'] == 'high':
-            _, neighbor = kdtree.query(user)
-            user_rd = user_embedding[neighbor[0]]
-
+            #_, neighbor = kdtree.query(user)
+            #user_rd = user_embedding[neighbor[0]]
+            user_rd = reducer.transform(user)[0]
         st.session_state.user = user_rd
 
 
