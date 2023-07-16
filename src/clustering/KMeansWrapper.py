@@ -3,7 +3,7 @@ import pathlib
 from sklearn import metrics
 from sklearn.cluster import KMeans
 import numpy as np
-from sklearn.metrics import euclidean_distances
+from sklearn.metrics.pairwise import cosine_distances
 import plotly.graph_objects as go
 
 
@@ -50,7 +50,7 @@ class KMeansWrapper:
         centers = self.model.cluster_centers_
         repr = np.zeros(shape=(self.n_clusters, len(X[0])))
         for label, center in enumerate(centers):
-            dists = euclidean_distances(center.reshape(1, -1), X[self.labels == label])
+            dists = cosine_distances(center.reshape(1, -1), X[self.labels == label])
             repr[label] = X[self.labels == label][np.argmin(dists[0])]
         return repr
 
