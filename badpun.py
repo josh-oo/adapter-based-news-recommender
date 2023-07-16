@@ -245,7 +245,11 @@ with recommendation_tab:
 
 for number in range(int(config['NoClusters'])):
     user_index = get_mind_id_from_index(model.repr_indeces[number])
-
+    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=user_index,
+                                                            take_top_k=10, batch_size=BATCH)
+    f = open(f"media/{config['Dimensionality']}/lrp/headlines_{number}.txt", "w+")
+    for (article, article_index, score) in cluster_recommendations:
+        f.write(f"{article_index}\n")
     results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
 
     wordcloud_scaling = get_wordcloud_from_attention(*results, mode='scaling')
