@@ -2,8 +2,6 @@ import configparser
 import time
 import streamlit as st
 import umap
-import numpy as np
-from scipy.spatial import KDTree
 import sys
 
 from src.clustering.AgglomerativeWrapper import AgglomorativeWrapper
@@ -47,11 +45,6 @@ def load_rm():
 
 
 @st.cache_resource
-def load_kdtree():
-    return KDTree(click_predictor.get_historic_user_embeddings())
-
-
-@st.cache_resource
 def fit_reducer():
     user_embedding = click_predictor.get_historic_user_embeddings()
     fit = umap.UMAP(
@@ -77,7 +70,6 @@ def get_agglomorative_model():
 
 click_predictor = load_predictor()
 ranking_module = load_rm()
-kdtree = load_kdtree()
 reducer = fit_reducer()
 
 
@@ -161,8 +153,6 @@ with recommendation_tab:
         if config['Dimensionality'] == 'low':
             user_rd = reducer.transform(user)[0]
         elif config['Dimensionality'] == 'high':
-            #_, neighbor = kdtree.query(user)
-            #user_rd = user_embedding[neighbor[0]]
             user_rd = reducer.transform(user)[0]
         st.session_state.user = user_rd
 
