@@ -9,6 +9,7 @@ import os
 import random
 import numpy as np
 import tempfile
+import glob
 
 class ClickPredictor():
   def __init__(self, huggingface_url : str, commit_hash : str = None, device : str = None):
@@ -22,7 +23,7 @@ class ClickPredictor():
     config = BertConfigAdapters.from_pretrained(huggingface_url, revision=commit_hash)
     self.model = BertForSequenceClassificationAdapters.from_pretrained(huggingface_url, revision=commit_hash)
     self.tokenizer = AutoTokenizer.from_pretrained(huggingface_url, revision=commit_hash)
-    
+
     #load user mapping
     self.user_mapping = {}
     user_mapping_file = hf_hub_download(repo_id=huggingface_url, filename="user_mapping.json", revision=commit_hash)
@@ -49,7 +50,7 @@ class ClickPredictor():
     self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=learning_rate, weight_decay=0.1)
     self.positive_training_sample_path = "training_samples_positive.txt"
     self.negative_training_sample_path = "training_samples_negative.txt"
-        
+
     self.device = device
     if self.device is not None:
       self.model.to(device)
@@ -90,7 +91,7 @@ class ClickPredictor():
     all_values = (np.array(all_values) - min(all_values)) / (max(all_values) - min(all_values))
 
     return all_words, all_values
-    
+
   #adapted from https://github.com/hila-chefer/Transformer-Explainability/tree/main/BERT_explainability/modules/BERT
   def _generate_lrp(self, output, summed_attention_mask, start_layer=5):
 
@@ -107,7 +108,7 @@ class ClickPredictor():
         for i in range(start_layer+1, len(matrices_aug)):
             joint_attention = matrices_aug[i].bmm(joint_attention)
         return joint_attention
-    
+
     predictions = torch.argmax(output, axis=-1).detach()
 
     one_hot_vector = torch.nn.functional.one_hot(predictions, num_classes=2).float()
@@ -143,7 +144,7 @@ class ClickPredictor():
       #set sep score to zero
       rollout[:, 0, summed_attention_mask[i]-1] = rollout[:, 0].min()
       results.append(rollout[:, 0])
-      
+
     return results
 
   def _get_score_and_relevancies(self, headlines : List[str], user_id : str = "CUSTOM"):
@@ -183,7 +184,7 @@ class ClickPredictor():
       logits =outputs.logits
       probs = torch.nn.functional.softmax(logits, dim=-1)
       scores = probs[:,1].detach().cpu().numpy()
-      
+
       predictions = torch.argmax(logits, axis=-1).detach()
       summed_attention_mask=inputs['attention_mask'].sum(dim=1)
       relevancies = self._generate_lrp(logits,summed_attention_mask=summed_attention_mask)
@@ -192,7 +193,7 @@ class ClickPredictor():
         all_scores[i] = score.item()
         relevancy = relevancy.squeeze()
         all_relevancies[i] = relevancy.detach().cpu().numpy()[:non_padded_tokens]
-  
+
         cache_file = user_id + "#" + str(hash(headlines[i])) + ".npz"
         np.savez(os.path.join(self.cache_dir.name, cache_file), score=all_scores[i], relevancy=all_relevancies[i])
 
@@ -245,6 +246,14 @@ class ClickPredictor():
         word_values = dict(zip(words, values))
         word_relevancies.append(word_values)
 
+    #cache highest and lowest rank for online learning
+    current_highest_ranking = np.argmax(scores)
+    current_lowest_ranking = np.argmin(scores)
+    with open(os.path.join(self.cache_dir.name, "highest_ranking.txt"), "w") as highest:
+        highest.write(headlines[current_highest_ranking])
+    with open(os.path.join(self.cache_dir.name, "lowest_ranking.txt"), "w") as lowest:
+        lowest.write(headlines[current_lowest_ranking])
+
     return scores, word_relevancies
 
   def update_step(self, new_headline : str, new_label : int):
@@ -260,23 +269,42 @@ class ClickPredictor():
     with open(path, "a") as sample_file:
         sample_file.write(new_headline + "\n")
 
-    #perform online learning step only if we got a new positive sample
-    if new_label != 1:
-        return
-
-    #load all available negative samples
+    #load all stored negative samples
     all_negative_samples = []
     if os.path.exists(self.negative_training_sample_path):
         with open(self.negative_training_sample_path) as f:
             all_negative_samples = [line.rstrip() for line in f]
-    num_negative_samples = len(all_negative_samples)
-    if num_negative_samples == 0:
+
+    #load all stored positive samples
+    all_positive_samples = []
+    if os.path.exists(self.positive_training_sample_path):
+        with open(self.positive_training_sample_path) as f:
+            all_positive_samples = [line.rstrip() for line in f]
+
+    if len(all_negative_samples) == 0 or len(all_positive_samples) == 0:
+        if len(all_positive_samples) == 0:
+            highest_ranking_path = os.path.join(self.cache_dir.name, "highest_ranking.txt")
+            if os.path.exists(highest_ranking_path):
+                with open(highest_ranking_path) as f:
+                  all_positive_samples = [line.rstrip() for line in f]
+        if len(all_negative_samples) == 0:
+            lowest_ranking_path = os.path.join(self.cache_dir.name, "lowest_ranking.txt")
+            if os.path.exists(lowest_ranking_path):
+                with open(lowest_ranking_path) as f:
+                  all_negative_samples = [line.rstrip() for line in f]
+
+    #if there are still no samples, we have to skip this learning step
+    if len(all_negative_samples) == 0 or len(all_positive_samples) == 0:
         return
 
     #sample k=4 negative samples
     k=4
-    negative_samples = random.choices(all_negative_samples, k=k)
-    all_samples = negative_samples + [new_headline]
+    negative_samples = all_negative_samples[:k]
+    if len(negative_samples) < k:
+        #if there aer not enough negative samples we will oversample from the already existing negative samples
+        negative_samples = random.choices(negative_samples, k=k)
+    positive_sample = all_positive_samples[-1] #we will always use the last positive sample
+    all_samples = negative_samples + [positive_sample]
 
     random_permutation = np.random.permutation(k + 1)
     all_samples = np.array(all_samples)[random_permutation]
@@ -334,7 +362,7 @@ class ClickPredictor():
     :return: personlized embedding in the shape (embedding_dim, 1)
     """
     return self.model.user_embeddings.weight[-1].detach().numpy()
-    
+
   def reset_custom_data(self):
     """
     deletes personal files and cache
@@ -343,10 +371,29 @@ class ClickPredictor():
     #reset personal user embedding
     personal_user_embedding = torch.ones(1, self.model.config.embedding_size).normal_(mean=0.0, std=self.model.config.initializer_range)
     torch.save(personal_user_embedding, self.user_embedding_path)
-    
+
     #remove collected training samples
     for f in glob.glob("training_samples_*.txt"):
       os.remove(f)
+
+  def set_personal_user_embedding(self, user_id):
+    """
+    :param
+      user_id : (str) : the mind user_id to initialize the useres embedding
+    :return: personlized embedding in the shape (embedding_dim, 1)
+    """
+    #remove collected training samples
+    for f in glob.glob("training_samples_*.txt"):
+      os.remove(f)
+
+    all_cached_files = os.listdir(self.cache_dir.name)
+    for cached_file in all_cached_files:
+      if cached_file.startswith("CUSTOM"):
+        os.remove(os.path.join(self.cache_dir.name, cached_file))
+
+    user_index = self.user_mapping[user_id]
+    with torch.no_grad():
+        self.model.user_embeddings.weight[-1] = self.model.user_embeddings.weight[user_index]
 
 
 class RankingModule():
@@ -388,7 +435,7 @@ class RankingModule():
 
     selected_headlines = []
     while len(selected_headlines) < k_best and len(headlines_sorted) > 0:
-      candidate, id, score = headlines_ids_sorted.pop(0)
+      candidate, index, score = headlines_ids_sorted.pop(0)
 
       #calculate similarity to already existing candidates
       similar_headline_already_selected = False
@@ -399,7 +446,7 @@ class RankingModule():
           break
 
       if similar_headline_already_selected == False:
-        selected_headlines.append((candidate, id, score))
+        selected_headlines.append((candidate, index, score))
 
     #reverse headlines for low ranked articles
     headlines_ids_sorted = reversed(headlines_ids_sorted)
@@ -407,7 +454,7 @@ class RankingModule():
     #fill the remaining space with exploration headlines
     while len(selected_headlines) < take_top_k:
       try:
-        candidate, id, score = headlines_ids_sorted.pop(0)
+        candidate, index, score = headlines_ids_sorted.pop(0)
       except Exception:
         break
 
@@ -420,6 +467,6 @@ class RankingModule():
           break
 
       if similar_headline_already_selected == False:
-        selected_headlines.append((candidate, id, score))
+        selected_headlines.append((candidate, index, score))
 
     return selected_headlines

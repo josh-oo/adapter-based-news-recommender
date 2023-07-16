@@ -82,7 +82,6 @@ class KMeansWrapper:
                                  size=3),
                              hoverinfo="name",
                              mode='markers', name=label)
-                # marker_color=[self.predict(user)]) # todo
             )
         fig.update_layout(height=800)  # todo configure
         self.figure = fig

@@ -9,7 +9,6 @@ from collections import Counter
 from wordcloud import STOPWORDS
 from wordcloud import get_single_color_func
 
-
 def remove_old_files():
     if 'clean' not in st.session_state or st.session_state['clean'] is False:
         try:
@@ -29,7 +28,7 @@ def load_data(path):
 @st.cache_data
 def load_headlines():
     headline_path = st.session_state.config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(st.session_state.config['NoHeadlines']), [1, 3]]
+    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(st.session_state.config['NoHeadlines']), :]
 
 
 @st.cache_data
@@ -47,9 +46,9 @@ def load_normalized_category_frequencies(path, user_mapping):
 
 
 @st.cache_data
-def get_mind_id_from_index(id):
+def get_mind_id_from_index(index):
     user_mapping = json.load(open(st.session_state.config['IdMappingPath']))
-    return list(user_mapping.keys())[list(user_mapping.values()).index(id)]
+    return list(user_mapping.keys())[list(user_mapping.values()).index(index)]
 
 
 def generate_wordcloud_from_user_category(labels, cluster_id):
@@ -91,10 +90,16 @@ def set_session_state(emergency_user):
             [True] * (int(
                 st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
+def reset_session_state(cold_start_user):
+        st.session_state['cold_start'] = cold_start_user
+        st.session_state['user'] = st.session_state['cold_start']
+        st.session_state['article_mask'] = np.array(
+            [True] * (int(
+                st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
 
 def extract_unread(headlines):
     unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
-    unread_headlines = list(headlines.loc[:, 3][st.session_state.article_mask])
+    unread_headlines = list(headlines.loc[:, 2][st.session_state.article_mask])
     return unread_headlines_ind, unread_headlines
 
 
@@ -102,7 +107,7 @@ def get_wordcloud_from_attention(scores, word_deviations, mode='scaling'):
     c_word_deviations = Counter()
 
     if mode == 'counting':
-        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
+        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.6]
     elif mode == 'scaling':
         word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
     else:

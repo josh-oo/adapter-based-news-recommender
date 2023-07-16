@@ -2,12 +2,14 @@ import configparser
 import time
 import streamlit as st
 import umap
+import numpy as np
 from scipy.spatial import KDTree
+import sys
 from src.recommendation.ClickPredictor import ClickPredictor, RankingModule
-from src.clustering.KMeansWrapper import KMeansWrapper
+from src.clustering.AgglomerativeWrapper import AgglomorativeWrapper
 from src.utils import load_headlines, \
     generate_header, set_session_state, extract_unread, \
-    get_wordcloud_from_attention, remove_old_files, get_mind_id_from_index
+    get_wordcloud_from_attention, remove_old_files, get_mind_id_from_index, reset_session_state
 
 BATCH = 50
 ### GENERAL PAGE INFO ###
@@ -23,6 +25,11 @@ remove_old_files()
 if 'config' not in st.session_state:
     config = configparser.ConfigParser()
     config.read('config.ini')
+    if len(sys.argv) > 1:
+        if sys.argv[1] not in ['high', 'low']:
+            raise ValueError(f"{sys.argv[1]} is not a valid command line parameter. Options are 'high' and 'low'")
+        config['DEFAULT']['Dimensionality'] = sys.argv[1]
+        print(f"Chosen dimensionality: {config['DEFAULT']['Dimensionality']}")
     st.session_state['config'] = config[config['DEFAULT']['Dimensionality']]
 
 config = st.session_state['config']
@@ -54,19 +61,16 @@ def fit_reducer():
     )
     return fit.fit(user_embedding)
 
-
 @st.cache_resource
-def get_kmeans_model():
+def get_agglomorative_model():
     if config['Dimensionality'] == 'low':
         embeddings = user_embedding
     elif config['Dimensionality'] == 'high':
         embeddings = click_predictor.get_historic_user_embeddings()
     else:
         raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
-    model = KMeansWrapper(embeddings)
-    print(model.repr_indeces)
+    model = AgglomorativeWrapper(embeddings)
     return model
-
 
 click_predictor = load_predictor()
 ranking_module = load_rm()
@@ -80,12 +84,13 @@ def umap_transform():
 
 
 user_embedding = umap_transform()
-model = get_kmeans_model()
+model = get_agglomorative_model()
 
-set_session_state(user_embedding[3])  # todo replace
+set_session_state(user_embedding[112])
 
 headlines = load_headlines()
 unread_headlines_ind, unread_headlines = extract_unread(headlines)
+
 if config['Dimensionality'] == 'low':
     prediction = model.predict(st.session_state.user)
 elif config['Dimensionality'] == 'high':
@@ -101,21 +106,28 @@ cold_start_tab, recommendation_tab, alternative_tab = st.tabs(["Reset User", "Pe
 
 with cold_start_tab:
     st.write('To start off, choose a user which matches your interest most:')
-    columns = st.columns(3)
+    user_cols = st.columns(3)
+    all_headlines = list(headlines.loc[:, 2])
+    all_headlines_ind = list(headlines.loc[:, 0])
 
-    def set_user():
+
+    def choose_user(user_index, u_id):
         st.session_state['clean'] = False
+        remove_old_files()
+        reset_session_state(user_embedding[user_index])
+        click_predictor.set_personal_user_embedding(u_id)
 
-    buttons = [column.button(f"User {i + 1}", use_container_width=True, on_click=set_user) for i, column in enumerate(columns)]
+    for i, (col, user_index) in enumerate(zip(user_cols, [112, 511, 303])):
+        u_id = get_mind_id_from_index(user_index)
+        col.button(f"User {i+1}", use_container_width=True, on_click=choose_user, args=(user_index, u_id), type='primary')
+        article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=u_id,
+                                                                take_top_k=10)
 
-    # # todo initialize as 1 in proper dimension
-    # if 'user' not in st.session_state:
-    #     st.session_state['user'] = []
+        article_fields = [col.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
+                                    key=f"{i}_{button_index}")
+                          for button_index, (article, article_index, score) in
+                          enumerate(article_recommendations)]
 
-    # todo plug in when ready
-    # for user, button in zip(users, buttons):
-    #     if button:
-    #         st.session_state.cold_start = user
 
 with recommendation_tab:
     ### LAYOUT ###
@@ -133,7 +145,6 @@ with recommendation_tab:
 
     article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, take_top_k=2,
                                                             batch_size=BATCH)
-
     print(f"Get recommendation: {time.time() - start}")
     current_article = article_recommendations[0][0]
     current_index = article_recommendations[0][1]
@@ -145,7 +156,6 @@ with recommendation_tab:
 
         user = click_predictor.get_personal_user_embedding().reshape(1, -1)
 
-        # todo is this ok?
         # ok, alternatvie is in the report
         if config['Dimensionality'] == 'low':
             user_rd = reducer.transform(user)[0]
@@ -180,7 +190,7 @@ with recommendation_tab:
     interpretation.header('Interpretation')
     start = time.time()
 
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), batch_size=BATCH)
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), batch_size=BATCH)
     wordcloud = get_wordcloud_from_attention(*results)
     print(f"Words: {time.time() - start}")
 
@@ -201,23 +211,19 @@ with alternative_tab:
     ### 2.1 Newsfeed ###
     left.header('Newsfeed')
 
-    # get represenatnt of cluster chosen by user
-
-    # todo get id from suggestion
-    id = get_mind_id_from_index(model.repr_indeces[number])
+    user_index = get_mind_id_from_index(model.repr_indeces[number])
 
     def button_callback_alternative(article_index, test):
         st.session_state.article_mask[article_index] = False
 
 
-    article_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=id,
+    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=user_index,
                                                             take_top_k=10, batch_size=BATCH)
-
     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
                                          args=(article_index, 0))
                       for button_index, (article, article_index, score) in
-                      enumerate(article_recommendations)]  # sorry for ugly
+                      enumerate(cluster_recommendations)]  # sorry for ugly
 
     ### 2.2. Clustering ###
 
@@ -230,7 +236,7 @@ with alternative_tab:
     # todo these can be precaclulated
     right.header('Interpretation')
 
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 3]), user_id=id, batch_size=BATCH)
+    results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index, batch_size=BATCH)
 
     wordcloud = get_wordcloud_from_attention(*results)
 

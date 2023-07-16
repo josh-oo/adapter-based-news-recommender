@@ -5,6 +5,12 @@ Install pip environment via `pip install -r requirements.txt`
 
 Run with 
 `streamlit run badpun.py` from root directory.
+When running two instances, specify port by `streamlit run badpun.py --server.port 8051`. For one high clustering and 
+one low clustering instance run
+```
+$ streamlit run badpun.py --server.port 8051 -- high
+$ streamlit run badpun.py --server.port 8052 -- low
+```
 
 ### Structure
 The directory `pages/` holds the streamlit subpages in the order in which they are shown in the interface. 
