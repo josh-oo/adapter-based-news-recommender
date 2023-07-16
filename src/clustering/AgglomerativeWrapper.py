@@ -9,21 +9,11 @@ import plotly.graph_objects as go
 
 class AgglomorativeWrapper:
 
-    def __init__(self, data):
-        self.get_cluster_config()
+    def __init__(self, config, data):
+        self.config = config
+        self.n_clusters = int(self.config['NoClusters'])
         self.labels = AgglomerativeClustering(n_clusters = self.n_clusters).fit_predict(data)
         self.extract_representations(data)
-
-
-    def get_cluster_config(self):
-        """
-        Gets parameters from config file and sets them as class attributes
-        """
-        config = configparser.ConfigParser()
-        file_path = pathlib.Path(__file__).parent.parent.parent / 'config.ini'
-        config.read(file_path)
-        self.config = config[config['DEFAULT']['Dimensionality']]
-        self.n_clusters = int(self.config['NoClusters'])
 
     def extract_representations(self, X, mode='medoid'):
         """
