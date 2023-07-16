@@ -350,6 +350,10 @@ class ClickPredictor():
       if cached_file.startswith("CUSTOM"):
         os.remove(os.path.join(self.cache_dir.name, cached_file))
 
+    # unfreeze everything for lrp calculations
+    for param in self.model.parameters():
+        param.requires_grad = True
+
 
   def get_historic_user_embeddings(self):
     """
