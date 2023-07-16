@@ -230,15 +230,17 @@ with alternative_tab:
     middle.plotly_chart(model.figure)
 
     ### 2.3. INTERPRETATION ###
-    # todo these can be precaclulated
     right.header('Interpretation')
 
-    results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
+    if config['WordcloudGeneration'] == 'load':
+        right.image(f"media/{config['Dimensionality']}/attention/scaling_{number}.svg", use_column_width="auto")
+    elif config['WordcloudGeneration'] == 'calculate':
+        results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
 
-    wordcloud = get_wordcloud_from_attention(*results)
+        wordcloud = get_wordcloud_from_attention(*results)
 
-    # Display the generated image:
-    right.image(wordcloud.to_array(), use_column_width="auto")
+        # Display the generated image:
+        right.image(wordcloud.to_array(), use_column_width="auto")
 #
 # for number in range(int(config['NoClusters'])):
 #     user_index = get_mind_id_from_index(model.repr_indeces[number])
