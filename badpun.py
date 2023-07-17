@@ -225,8 +225,12 @@ with alternative_tab:
     ### 2.3. INTERPRETATION ###
     right.header('Interpretation')
 
+    explanation_method = right.radio(
+        "Choose explanation method",
+        ('LRP', 'Attention'), horizontal=True)
     if config['WordcloudGeneration'] == 'load' and config['Dimensionality'] == 'high':
-        right.image(f"media/{config['Dimensionality']}/attention/scaling_{number}.svg", use_column_width="auto")
+        right.image(f"media/{config['Dimensionality']}/{explanation_method.lower()}/scaling_{number}.svg",
+                    use_column_width="auto")
 
     else:
         results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
