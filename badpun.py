@@ -111,7 +111,7 @@ with cold_start_tab:
         reset_session_state(user_embedding[user_index])
         click_predictor.set_personal_user_embedding(user_index)
 
-    for i, (col, user_index) in enumerate(zip(user_cols, [112, 1069, 1737])):
+    for i, (col, user_index) in enumerate(zip(user_cols, [1228, 1700, 507])): # choice: 757/1228, 1700, 507; food: 757, celebrity: 1227,1228, 512; politics: 751, 723, 517, 514, 510, 315, 1700, 495, 501, 502, 504, 750  sports: 1703, 507, 509, 720
         col.button(f"User {i+1}", use_container_width=True, on_click=choose_user, args=(user_index, None), type='primary')
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=user_index,
                                                                 take_top_k=10)
@@ -189,10 +189,11 @@ with recommendation_tab:
 with alternative_tab:
     ### 1. CLUSTERING AND SUGGESTION ####
     left_column, right_column = st.columns(2)
-    left_column.write(f"Your actual cluster is {prediction}. Most clusters (such as cluster 8)"
-                      f" are murder and "
-                      f"shootings. Choose any other cluster on the right.")
-    left_column.markdown("**Check out Cluster 4, 7, 10, 14, 18 and 19 for clear cluster profiles.**")
+    left_column.write(f"You have been matched with cluster {prediction}. Please feel free to choose any other cluster on the right.") 
+    left_column.write("Most clusters (such as cluster 3)"
+                      f" are about murder, death, and "
+                      f"calamities – oh well, human kind is just drawn to those big headlines. But there're also some clusters about sports, politics, celebrities, and food, as well as nicely mixed ones.")
+    left_column.write(f" **We recommend to check out clusters 2, 13, 15, 19, 34, and 39 to see some very clear cluster profiles**.")
     number = right_column.number_input('Cluster', min_value=0, max_value=int(config['NoClusters']) - 1,
                              value=prediction)
 
@@ -207,7 +208,7 @@ with alternative_tab:
         st.session_state.article_mask[article_index] = False
 
 
-    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=user_index,
+    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id= model.repr_indeces[number],
                                                             take_top_k=10)
     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
