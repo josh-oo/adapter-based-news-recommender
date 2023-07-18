@@ -29,42 +29,8 @@ def load_data(path):
 @st.cache_data
 def load_headlines():
     headline_path = st.session_state.config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').loc[:int(st.session_state.config['NoHeadlines']), :]
-
-
-@st.cache_data
-def load_normalized_category_frequencies(path, user_mapping):
-    df = pd.read_csv(path)
-    # load frequencies
-    user_category_frequ = df.loc[df['user'].isin(user_mapping.keys())]
-    del df
-    # normalize
-    user_category_frequ.iloc[:, 2:] = user_category_frequ.iloc[:, 2:] \
-        .div(user_category_frequ
-             .iloc[:, 2:].sum(axis=1), axis=0)
-
-    return user_category_frequ
-
-
-@st.cache_data
-def get_mind_id_from_index(index):
-    user_mapping = json.load(open(st.session_state.config['IdMappingPath']))
-    return list(user_mapping.keys())[list(user_mapping.values()).index(index)]
-
-
-def generate_wordcloud_from_user_category(labels, cluster_id):
-    # Opening JSON file
-    user_mapping = json.load(open(st.session_state.config['IdMappingPath']))
-    user_category_frequ = load_normalized_category_frequencies(st.session_state.config['UserCategoriesPath'],
-                                                               user_mapping)
-
-    index_current_cluster_points = (labels == cluster_id).nonzero()[0]
-    user_ids_current_cluster = [key for key in user_mapping if user_mapping[key] in index_current_cluster_points]
-
-    category_freq_current_cluster = user_category_frequ.loc[user_category_frequ['user'].isin(user_ids_current_cluster)]
-    freq = category_freq_current_cluster.iloc[:, 2:].sum()
-
-    return generate_wordcloud(freq)
+    return pd.read_csv(headline_path, header=None, sep='\t').tail(int(st.session_state.config['NoHeadlines']))\
+        .reset_index(drop=True)
 
 
 def generate_wordcloud(word_dict):
@@ -89,14 +55,14 @@ def set_session_state(emergency_user):
     if 'article_mask' not in st.session_state:
         st.session_state['article_mask'] = np.array(
             [True] * (int(
-                st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
+                st.session_state.config['NoHeadlines'])))
 
 def reset_session_state(cold_start_user):
         st.session_state['cold_start'] = cold_start_user
         st.session_state['user'] = st.session_state['cold_start']
         st.session_state['article_mask'] = np.array(
             [True] * (int(
-                st.session_state.config['NoHeadlines']) + 1))  # +1 because indexing in pandas is apparently different
+                st.session_state.config['NoHeadlines'])))
 
 def extract_unread(headlines):
     unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]

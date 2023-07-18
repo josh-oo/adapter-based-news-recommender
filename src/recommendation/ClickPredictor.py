@@ -24,12 +24,6 @@ class ClickPredictor():
     self.model = BertForSequenceClassificationAdapters.from_pretrained(huggingface_url, revision=commit_hash)
     self.tokenizer = AutoTokenizer.from_pretrained(huggingface_url, revision=commit_hash)
 
-    #load user mapping
-    self.user_mapping = {}
-    user_mapping_file = hf_hub_download(repo_id=huggingface_url, filename="user_mapping.json", revision=commit_hash)
-    with open(user_mapping_file) as f:
-        self.user_mapping = json.load(f)
-
     #prepare cache file
     self.cache_dir = tempfile.TemporaryDirectory()
 
@@ -130,7 +124,7 @@ class ClickPredictor():
 
     #check for each headline if it is already cached; if yes, load it from cache; else predict scores and attentions using the pytorch model
     for i, headline in enumerate(headlines):
-      cache_file = user_id + "#" + str(hash(headline)) + ".npz"
+      cache_file = str(user_id) + "#" + str(hash(headline)) + ".npz"
       if cache_file in all_cached_files:
         data = np.load(os.path.join(self.cache_dir.name, cache_file))
         all_scores[i] = data['score']
@@ -145,7 +139,7 @@ class ClickPredictor():
       if user_id == "CUSTOM":
         user_index = torch.tensor([len(self.model.user_embeddings.weight) -1], device=self.model.device).unsqueeze(dim=0)
       elif user_id is not None and user_id != "NONE":
-        user_index = torch.tensor([self.user_mapping[user_id]], device=self.model.device).unsqueeze(dim=0)
+        user_index = torch.tensor([user_id], device=self.model.device).unsqueeze(dim=0)
 
       self.model.eval()
       with torch.no_grad():
@@ -158,7 +152,7 @@ class ClickPredictor():
           #we are only interested in the cls token as it is used in our pooling step
           all_attentions[i] = attention[:,0].numpy()
 
-          cache_file = user_id + "#" + str(hash(headlines[i])) + ".npz"
+          cache_file = str(user_id) + "#" + str(hash(headlines[i])) + ".npz"
           np.savez(os.path.join(self.cache_dir.name, cache_file), score=all_scores[i], attentions=all_attentions[i])
 
     return np.array(all_scores), all_attentions
@@ -176,7 +170,7 @@ class ClickPredictor():
       word_level_deviations (List[dict]): a list of dicts containing the headlines words and the deviation compared to the unpersonalized net
       personal_deviations (List[float]) : a list of floats indicating the deviation of the personal click probability compared to the non-personalized net
     """
-    assert user_id == "CUSTOM" or user_id in self.user_mapping.keys(), "Given user id is not available"
+    # assert user_id == "CUSTOM" or int(user_id) < 2500, "Given user id is not available" # todo complete check
     personal_scores, personal_attention = self._get_score_and_attentions(headlines,user_id)
 
     personal_deviations = None
@@ -313,7 +307,7 @@ class ClickPredictor():
     """
     return self.model.user_embeddings.weight[-1].detach().numpy()
 
-  def set_personal_user_embedding(self, user_id):
+  def set_personal_user_embedding(self, user_index):
     """
     :param
       user_id : (str) : the mind user_id to initialize the useres embedding
@@ -328,7 +322,6 @@ class ClickPredictor():
       if cached_file.startswith("CUSTOM"):
         os.remove(os.path.join(self.cache_dir.name, cached_file))
 
-    user_index = self.user_mapping[user_id]
     with torch.no_grad():
         self.model.user_embeddings.weight[-1] = self.model.user_embeddings.weight[user_index]
 
