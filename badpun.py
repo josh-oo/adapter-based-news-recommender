@@ -242,9 +242,8 @@ with alternative_tab:
         right.image(wordcloud.to_array(), use_column_width="auto")
 
 # for number in range(int(config['NoClusters'])):
-#     user_index = get_mind_id_from_index(model.repr_indeces[number])
 #
-#     results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
+#     results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=model.repr_indeces[number])
 #
 #     wordcloud_scaling = get_wordcloud_from_attention(*results, mode='scaling')
 #     f = open(f"media/{config['Dimensionality']}/attention/scaling_{number}.svg", "w+")
