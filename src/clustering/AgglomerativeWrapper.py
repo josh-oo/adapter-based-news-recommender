@@ -3,7 +3,7 @@ import pathlib
 
 from sklearn.cluster import AgglomerativeClustering
 import numpy as np
-from sklearn.metrics.pairwise import cosine_distances
+from sklearn.metrics.pairwise import euclidean_distances
 import plotly.graph_objects as go
 
 
@@ -43,13 +43,13 @@ class AgglomorativeWrapper:
         centers = np.zeros(shape=(self.n_clusters, len(X[0])))
         for label in range(self.n_clusters):
             centroid = np.mean(X[self.labels == label], axis=0)
-            dists = cosine_distances(centroid.reshape(1, -1), X[self.labels == label])
+            dists = euclidean_distances(centroid.reshape(1, -1), X[self.labels == label])
             centers[label] = X[self.labels == label][np.argmin(dists[0])]
         return centers
 
     def predict(self, user):
         locations = self.representants
-        dists = cosine_distances(user.reshape(1, -1), locations)
+        dists = euclidean_distances(user.reshape(1, -1), locations)
         return np.argmin(dists[0])
 
     def visualize(self, data, repr, points=None):
