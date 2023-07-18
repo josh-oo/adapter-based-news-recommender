@@ -29,7 +29,7 @@ def load_data(path):
 @st.cache_data
 def load_headlines():
     headline_path = st.session_state.config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').tail(int(st.session_state.config['NoHeadlines']))\
+    return pd.read_csv(headline_path, header=None, sep='\t').head(int(st.session_state.config['NoHeadlines']))\
         .reset_index(drop=True)
 
 
@@ -74,7 +74,7 @@ def get_wordcloud_from_attention(scores, word_deviations, personal_deviations, m
     c_word_deviations = Counter()
 
     if mode == 'counting':
-        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.6]
+        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
     elif mode == 'scaling':
         word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
     else:

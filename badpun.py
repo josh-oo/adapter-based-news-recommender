@@ -111,7 +111,7 @@ with cold_start_tab:
         reset_session_state(user_embedding[user_index])
         click_predictor.set_personal_user_embedding(user_index)
 
-    for i, (col, user_index) in enumerate(zip(user_cols, [112, 1069, 1737])):
+    for i, (col, user_index) in enumerate(zip(user_cols, [126, 1819, 783])):
         col.button(f"User {i+1}", use_container_width=True, on_click=choose_user, args=(user_index, None), type='primary')
         article_recommendations = ranking_module.rank_headlines(all_headlines_ind, all_headlines, user_id=user_index,
                                                                 take_top_k=10)
@@ -189,10 +189,8 @@ with recommendation_tab:
 with alternative_tab:
     ### 1. CLUSTERING AND SUGGESTION ####
     left_column, right_column = st.columns(2)
-    left_column.write(f"Your actual cluster is {prediction}. Most clusters (such as cluster 8)"
-                      f" are murder and "
-                      f"shootings. Choose any other cluster on the right.")
-    left_column.markdown("**Check out Cluster 4, 7, 10, 14, 18 and 19 for clear cluster profiles.**")
+    left_column.write(f"Your actual cluster is {prediction}. Some clusters are of very mixed content. Choose any other cluster on the right.")
+    left_column.markdown("**Check out Cluster 1, 5, 6, 9, 10, 14, 15, 17 and 19 for clear cluster profiles.**")
     number = right_column.number_input('Cluster', min_value=0, max_value=int(config['NoClusters']) - 1,
                              value=prediction)
 
@@ -202,12 +200,12 @@ with alternative_tab:
     ### 2.1 Newsfeed ###
     left.header('Newsfeed')
 
-
     def button_callback_alternative(article_index, test):
         st.session_state.article_mask[article_index] = False
 
 
-    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines, user_id=user_index,
+    cluster_recommendations = ranking_module.rank_headlines(unread_headlines_ind, unread_headlines,
+                                                            user_id=model.repr_indeces[number],
                                                             take_top_k=10)
     article_fields = [left.button(f"[{headlines.loc[article_index, 1]}] {article}", use_container_width=True,
                                          on_click=button_callback_alternative,
@@ -241,9 +239,8 @@ with alternative_tab:
         right.image(wordcloud.to_array(), use_column_width="auto")
 
 # for number in range(int(config['NoClusters'])):
-#     user_index = get_mind_id_from_index(model.repr_indeces[number])
 #
-#     results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=user_index)
+#     results = click_predictor.calculate_scores(list(headlines.loc[:, 2]), user_id=model.repr_indeces[number])
 #
 #     wordcloud_scaling = get_wordcloud_from_attention(*results, mode='scaling')
 #     f = open(f"media/{config['Dimensionality']}/attention/scaling_{number}.svg", "w+")
