@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750">
+<style>@font-face{font-family:'Droid Sans Mono';font-weight:normal;font-style:normal;src:url("data:application/font-woff;charset=utf-8;base64,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")format("woff");}</style>
+<style>text{font-family:'Droid Sans Mono';font-weight:normal;font-style:normal;}</style>
+<rect width="100%" height="100%" style="fill:rgba(255, 255, 255, 0)"></rect>
+<text transform="translate(36,196)" font-size="195" style="fill:rgb(59, 138, 221)">dead</text>
+<text transform="translate(12,523)" font-size="159" style="fill:rgb(34, 80, 127)">killed</text>
+<text transform="translate(69,714)" font-size="150" style="fill:rgb(43, 100, 160)">dies</text>
+<text transform="translate(39,373)" font-size="144" style="fill:rgb(52, 121, 193)">crash</text>
+<text transform="translate(12,595)" font-size="96" style="fill:rgb(15, 35, 56)">accused</text>
+<text transform="translate(39,244)" font-size="60" style="fill:rgb(20, 47, 76)">allegations</text>
+<text transform="translate(150,59)" font-size="60" style="fill:rgb(20, 47, 75)">trump</text>
+<text transform="translate(414,745)" font-size="60" style="fill:rgb(60, 141, 225)">biden</text>
+<text transform="translate(574,301) rotate(-90)" font-size="57" style="fill:rgb(17, 40, 63)">police</text>
+<text transform="translate(357,428)" font-size="54" style="fill:rgb(36, 83, 133)">murder</text>
+<text transform="translate(333,33)" font-size="39" style="fill:rgb(42, 98, 156)">reparations</text>
+<text transform="translate(414,666)" font-size="36" style="fill:rgb(50, 117, 187)">burglary</text>
+<text transform="translate(408,559)" font-size="33" style="fill:rgb(48, 113, 181)">egregious</text>
+<text transform="translate(147,286)" font-size="33" style="fill:rgb(20, 46, 74)">dismisses</text>
+<text transform="translate(171,732)" font-size="33" style="fill:rgb(56, 131, 209)">spree</text>
+<text transform="translate(240,625)" font-size="33" style="fill:rgb(14, 33, 53)">retirement</text>
+<text transform="translate(444,598)" font-size="33" style="fill:rgb(24, 57, 91)">lgbtq</text>
+<text transform="translate(186,397)" font-size="33" style="fill:rgb(44, 103, 165)">abortion</text>
+<text transform="translate(18,289)" font-size="33" style="fill:rgb(22, 52, 83)">died</text>
+<text transform="translate(508,380) rotate(-90)" font-size="33" style="fill:rgb(25, 57, 92)">shunning</text>
+<text transform="translate(3,735)" font-size="33" style="fill:rgb(43, 101, 162)">says</text>
+<text transform="translate(318,500) rotate(-90)" font-size="33" style="fill:rgb(35, 82, 132)">gop</text>
+<text transform="translate(28,233) rotate(-90)" font-size="33" style="fill:rgb(42, 98, 157)">trespassing</text>
+<text transform="translate(514,212) rotate(-90)" font-size="33" style="fill:rgb(68, 158, 253)">defacing</text>
+<text transform="translate(510,348)" font-size="33" style="fill:rgb(45, 105, 168)">care</text>
+<text transform="translate(435,629)" font-size="30" style="fill:rgb(31, 73, 116)">suspends</text>
+<text transform="translate(12,390)" font-size="24" style="fill:rgb(31, 72, 115)">restitution</text>
+<text transform="translate(429,687)" font-size="21" style="fill:rgb(39, 91, 145)">congresswoman</text>
+<text transform="translate(531,78)" font-size="21" style="fill:rgb(67, 156, 249)">rutte</text>
+<text transform="translate(385,202) rotate(-90)" font-size="21" style="fill:rgb(44, 102, 162)">bestselling</text>
+<text transform="translate(528,367)" font-size="21" style="fill:rgb(45, 105, 168)">death</text>
+<text transform="translate(3,616)" font-size="21" style="fill:rgb(32, 74, 118)">prigozhin</text>
+<text transform="translate(42,34)" font-size="21" style="fill:rgb(36, 84, 134)">alleges</text>
+<text transform="translate(270,736)" font-size="21" style="fill:rgb(66, 155, 247)">undress</text>
+<text transform="translate(90,732)" font-size="21" style="fill:rgb(68, 158, 253)">cortez</text>
+<text transform="translate(381,388)" font-size="21" style="fill:rgb(61, 143, 229)">aretha</text>
+<text transform="translate(589,530) rotate(-90)" font-size="21" style="fill:rgb(36, 84, 134)">insidious</text>
+<text transform="translate(22,370) rotate(-90)" font-size="21" style="fill:rgb(52, 120, 192)">ocasio</text>
+<text transform="translate(153,77)" font-size="18" style="fill:rgb(29, 68, 109)">misconduct</text>
+<text transform="translate(516,317)" font-size="18" style="fill:rgb(48, 112, 179)">mark</text>
+<text transform="translate(48,425)" font-size="18" style="fill:rgb(31, 73, 116)">rapinoe</text>
+<text transform="translate(288,257)" font-size="18" style="fill:rgb(34, 78, 125)">arrested</text>
+<text transform="translate(222,17)" font-size="18" style="fill:rgb(30, 70, 112)">desantis</text>
+<text transform="translate(201,161)" font-size="18" style="fill:rgb(43, 101, 161)">mirra</text>
+<text transform="translate(230,690) rotate(-90)" font-size="18" style="fill:rgb(18, 42, 67)">msnbc</text>
+<text transform="translate(30,71)" font-size="18" style="fill:rgb(14, 32, 52)">missing</text>
+<text transform="translate(513,386)" font-size="18" style="fill:rgb(36, 84, 134)">needs</text>
+<text transform="translate(590,218) rotate(-90)" font-size="18" style="fill:rgb(36, 85, 136)">unconscious</text>
+<text transform="translate(58,700) rotate(-90)" font-size="18" style="fill:rgb(35, 81, 129)">asap</text>
+<text transform="translate(69,332)" font-size="18" style="fill:rgb(40, 94, 150)">prison</text>
+<text transform="translate(165,434)" font-size="18" style="fill:rgb(46, 108, 173)">threat</text>
+<text transform="translate(270,428)" font-size="18" style="fill:rgb(45, 106, 170)">key</text>
+<text transform="translate(180,323)" font-size="18" style="fill:rgb(40, 93, 149)">bans</text>
+<text transform="translate(390,47)" font-size="18" style="fill:rgb(26, 61, 98)">spirals</text>
+<text transform="translate(411,269)" font-size="18" style="fill:rgb(26, 62, 98)">burgum</text>
+<text transform="translate(501,47)" font-size="18" style="fill:rgb(18, 42, 68)">backlash</text>
+<text transform="translate(87,485)" font-size="18" style="fill:rgb(26, 60, 96)">fired</text>
+<text transform="translate(429,221)" font-size="18" style="fill:rgb(42, 97, 155)">couch</text>
+<text transform="translate(6,639)" font-size="12" style="fill:rgb(52, 122, 196)">affirming</text>
+<text transform="translate(38,371) rotate(-90)" font-size="12" style="fill:rgb(67, 157, 251)">contest</text>
+<text transform="translate(507,258)" font-size="12" style="fill:rgb(66, 155, 247)">say</text>
+<text transform="translate(399,69)" font-size="12" style="fill:rgb(43, 101, 162)">lifeblood</text>
+<text transform="translate(63,531)" font-size="12" style="fill:rgb(56, 130, 208)">rights</text>
+<text transform="translate(267,119)" font-size="12" style="fill:rgb(66, 154, 247)">encampment</text>
+<text transform="translate(342,390)" font-size="12" style="fill:rgb(66, 155, 248)">2024</text>
+<text transform="translate(102,9)" font-size="12" style="fill:rgb(33, 77, 122)">pence</text>
+<text transform="translate(324,72)" font-size="12" style="fill:rgb(58, 136, 218)">fatal</text>
+<text transform="translate(163,333)" font-size="12" style="fill:rgb(30, 69, 111)">wrong</text>
+<text transform="translate(299,328) rotate(-90)" font-size="12" style="fill:rgb(51, 118, 189)">unseat</text>
+<text transform="translate(165,471)" font-size="12" style="fill:rgb(39, 92, 147)">pleads</text>
+<text transform="translate(198,498)" font-size="12" style="fill:rgb(19, 44, 71)">fiery</text>
+<text transform="translate(522,699)" font-size="12" style="fill:rgb(60, 139, 222)">allegedly</text>
+<text transform="translate(129,531)" font-size="12" style="fill:rgb(44, 104, 166)">massacre</text>
+<text transform="translate(174,351)" font-size="12" style="fill:rgb(15, 35, 55)">rapes</text>
+<text transform="translate(207,531)" font-size="12" style="fill:rgb(64, 150, 240)">homelessness</text>
+<text transform="translate(336,681)" font-size="12" style="fill:rgb(28, 66, 105)">scam</text>
+<text transform="translate(36,252)" font-size="12" style="fill:rgb(60, 140, 224)">drugging</text>
+<text transform="translate(543,582)" font-size="12" style="fill:rgb(18, 42, 68)">defends</text>
+<text transform="translate(282,502) rotate(-90)" font-size="12" style="fill:rgb(41, 95, 152)">ideology</text>
+<text transform="translate(438,492)" font-size="12" style="fill:rgb(56, 132, 210)">injured</text>
+<text transform="translate(150,684)" font-size="12" style="fill:rgb(28, 64, 103)">video</text>
+<text transform="translate(294,531)" font-size="12" style="fill:rgb(31, 73, 117)">unhappiness</text>
+<text transform="translate(330,273)" font-size="12" style="fill:rgb(15, 35, 56)">coroner</text>
+<text transform="translate(380,736) rotate(-90)" font-size="12" style="fill:rgb(63, 146, 233)">got</text>
+<text transform="translate(15,500) rotate(-90)" font-size="12" style="fill:rgb(55, 129, 206)">unflattering</text>
+<text transform="translate(177,447)" font-size="12" style="fill:rgb(57, 133, 212)">jackie</text>
+<text transform="translate(522,636)" font-size="12" style="fill:rgb(16, 37, 60)">traction</text>
+<text transform="translate(354,438)" font-size="12" style="fill:rgb(51, 119, 191)">problem</text>
+<text transform="translate(516,564)" font-size="12" style="fill:rgb(51, 119, 190)">ray</text>
+<text transform="translate(432,240)" font-size="12" style="fill:rgb(21, 50, 79)">alleged</text>
+<text transform="translate(252,180)" font-size="12" style="fill:rgb(53, 125, 199)">eye</text>
+<text transform="translate(96,258)" font-size="12" style="fill:rgb(32, 75, 119)">bodies</text>
+<text transform="translate(174,15)" font-size="12" style="fill:rgb(18, 43, 68)">prize</text>
+<text transform="translate(159,366)" font-size="12" style="fill:rgb(43, 99, 159)">irene</text>
+<text transform="translate(234,251)" font-size="12" style="fill:rgb(34, 80, 127)">getty</text>
+<text transform="translate(360,468)" font-size="12" style="fill:rgb(66, 155, 248)">hides</text>
+<text transform="translate(423,144)" font-size="12" style="fill:rgb(39, 91, 145)">raped</text>
+<text transform="translate(69,141)" font-size="12" style="fill:rgb(42, 98, 157)">moral</text>
+<text transform="translate(213,738)" font-size="12" style="fill:rgb(31, 73, 116)">mccray</text>
+<text transform="translate(423,636)" font-size="12" style="fill:rgb(43, 99, 159)">sparking</text>
+<text transform="translate(330,51)" font-size="12" style="fill:rgb(65, 151, 242)">burnt</text>
+<text transform="translate(3,531)" font-size="12" style="fill:rgb(35, 81, 129)">really</text>
+<text transform="translate(525,151) rotate(-90)" font-size="12" style="fill:rgb(47, 111, 177)">pushback</text>
+<text transform="translate(243,676) rotate(-90)" font-size="12" style="fill:rgb(57, 133, 213)">yellen</text>
+<text transform="translate(369,495)" font-size="12" style="fill:rgb(15, 35, 55)">bid</text>
+<text transform="translate(519,182) rotate(-90)" font-size="12" style="fill:rgb(33, 78, 125)">war</text>
+<text transform="translate(162,665) rotate(-90)" font-size="12" style="fill:rgb(31, 73, 116)">molesting</text>
+<text transform="translate(12,699)" font-size="12" style="fill:rgb(38, 89, 143)">task</text>
+<text transform="translate(201,168)" font-size="12" style="fill:rgb(24, 57, 91)">pacs</text>
+<text transform="translate(147,179) rotate(-90)" font-size="12" style="fill:rgb(19, 44, 70)">murderers</text>
+<text transform="translate(96,276)" font-size="12" style="fill:rgb(64, 150, 240)">deadly</text>
+<text transform="translate(93,498)" font-size="12" style="fill:rgb(50, 116, 185)">lawsuit</text>
+<text transform="translate(36,115) rotate(-90)" font-size="12" style="fill:rgb(29, 67, 107)">pounce</text>
+<text transform="translate(381,365) rotate(-90)" font-size="12" style="fill:rgb(55, 128, 205)">tiananmen</text>
+<text transform="translate(180,411)" font-size="12" style="fill:rgb(20, 46, 73)">ghost</text>
+<text transform="translate(471,369) rotate(-90)" font-size="12" style="fill:rgb(28, 66, 106)">impossible</text>
+<text transform="translate(99,459)" font-size="12" style="fill:rgb(29, 69, 110)">probes</text>
+<text transform="translate(90,570)" font-size="12" style="fill:rgb(60, 141, 225)">lost</text>
+</svg>
