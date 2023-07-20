@@ -22,7 +22,6 @@ class AgglomorativeWrapper:
         1. centroid: The mean of all points in the cluster. This is not a real user, and is not representative if
         the cluster is curved.
         2. medoids: The cluster point which is closest to the centroid.
-        NEEDS TO BE IMPLEMENTED IN CHILD CLASS
         :return: List of representants
         """
         if mode == 'centroid':
@@ -40,11 +39,14 @@ class AgglomorativeWrapper:
         return centers
 
     def medoids(self, X):
+        """
+        Caluclates the medoid, meaning the point of the cluster which is clostest to its center
+        """
         centers = np.zeros(shape=(self.n_clusters, len(X[0])))
         for label in range(self.n_clusters):
-            centroid = np.mean(X[self.labels == label], axis=0)
-            dists = cosine_distances(centroid.reshape(1, -1), X[self.labels == label])
-            centers[label] = X[self.labels == label][np.argmin(dists[0])]
+            centroid = np.mean(X[self.labels == label], axis=0) # get center
+            dists = cosine_distances(centroid.reshape(1, -1), X[self.labels == label]) # calculate all cosine dist to center
+            centers[label] = X[self.labels == label][np.argmin(dists[0])] # take minimum distance
         return centers
 
     def predict(self, user):

@@ -31,7 +31,6 @@ class KMeansWrapper:
         1. centroid: The mean of all points in the cluster. This is not a real user, and is not representative if
         the cluster is curved.
         2. medoids: The cluster point which is closest to the centroid.
-        NEEDS TO BE IMPLEMENTED IN CHILD CLASS
         :return: List of representants
         """
         if mode == 'centroid':
@@ -46,12 +45,15 @@ class KMeansWrapper:
     def centroids(self):
         return self.model.cluster_centers_
 
-    def medoids(self, X):
+    def medoids(self, data_points):
+        """
+        Caluclates the medoid, meaning the point of the cluster which is clostest to its center
+        """
         centers = self.model.cluster_centers_
-        repr = np.zeros(shape=(self.n_clusters, len(X[0])))
+        repr = np.zeros(shape=(self.n_clusters, len(data_points[0])))
         for label, center in enumerate(centers):
-            dists = cosine_distances(center.reshape(1, -1), X[self.labels == label])
-            repr[label] = X[self.labels == label][np.argmin(dists[0])]
+            dists = cosine_distances(center.reshape(1, -1), data_points[self.labels == label])
+            repr[label] = data_points[self.labels == label][np.argmin(dists[0])]
         return repr
 
     def predict(self, user):
@@ -83,18 +85,11 @@ class KMeansWrapper:
                              hoverinfo="name",
                              mode='markers', name=label)
             )
-        fig.update_layout(height=800)  # todo configure
+        fig.update_layout(height=800)
         self.figure = fig
 
-    def measure_performance(self, X, metric='chi'):
-        if metric == 'chi':
-            return metrics.calinski_harabasz_score(X, self.model.labels_)
-        elif metric == 'dbi':
-            return metrics.davies_bouldin_score(X, self.model.labels_)
-        else:
-            raise Exception('Not a valid value for the parameter "metric"')
-
     def get_exemplar_of_cluster(self, id):
+        """ Returns both the value of the exemplar of a cluster as well as the index it has in the historic users. """
         if id > len(self.representants):
             raise ValueError
         return self.representants[id], self.repr_indeces[id]
