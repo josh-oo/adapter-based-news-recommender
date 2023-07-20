@@ -78,7 +78,7 @@ def extract_unread(headlines):
     return unread_headlines_ind, unread_headlines
 
 
-def get_wordcloud_from_attention(scores, word_deviations, mode='scaling'):
+def get_wordcloud_from_attention(scores, word_deviations, personal_deviations, mode='scaling'):
     """
     Performs pre-processing of words for wordcloud:
     1. only headlines which are recommended (score > 0.5) are retained
