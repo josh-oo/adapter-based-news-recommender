@@ -1,5 +1,4 @@
 import glob
-import json
 import os
 import numpy as np
 import pandas as pd
@@ -11,6 +10,10 @@ from wordcloud import get_single_color_func
 
 
 def remove_old_files():
+    """
+    If its the first run or if the session state needs to be cleaned,
+    all files generated for the recommender model are deleted
+    """
     if 'clean' not in st.session_state or st.session_state['clean'] is False:
         try:
             os.remove('personal_user_embedding.pt')
@@ -29,7 +32,7 @@ def load_data(path):
 @st.cache_data
 def load_headlines():
     headline_path = st.session_state.config['HeadlinePath']
-    return pd.read_csv(headline_path, header=None, sep='\t').head(int(st.session_state.config['NoHeadlines']))\
+    return pd.read_csv(headline_path, header=None, sep='\t').tail(int(st.session_state.config['NoHeadlines'])) \
         .reset_index(drop=True)
 
 
@@ -57,28 +60,39 @@ def set_session_state(emergency_user):
             [True] * (int(
                 st.session_state.config['NoHeadlines'])))
 
+
 def reset_session_state(cold_start_user):
-        st.session_state['cold_start'] = cold_start_user
-        st.session_state['user'] = st.session_state['cold_start']
-        st.session_state['article_mask'] = np.array(
-            [True] * (int(
-                st.session_state.config['NoHeadlines'])))
+    st.session_state['cold_start'] = cold_start_user
+    st.session_state['user'] = st.session_state['cold_start']
+    st.session_state['article_mask'] = np.array(
+        [True] * (int(
+            st.session_state.config['NoHeadlines'])))
+
 
 def extract_unread(headlines):
+    """
+    Returns only the headlines, which have not yet been marked as read in the session stat
+    """
     unread_headlines_ind = np.nonzero(st.session_state.article_mask)[0]
     unread_headlines = list(headlines.loc[:, 2][st.session_state.article_mask])
     return unread_headlines_ind, unread_headlines
 
 
 def get_wordcloud_from_attention(scores, word_deviations, personal_deviations, mode='scaling'):
-    c_word_deviations = Counter()
+    """
+    Performs pre-processing of words for wordcloud:
+    1. only headlines which are recommended (score > 0.5) are retained
+    2. Only three most common words are retained
+    3. Stopwords and short words are removed
 
-    if mode == 'counting':
-        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
-    elif mode == 'scaling':
-        word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
-    else:
-        raise ValueError("Not a valid mode")
+    After that, either the words are counted, or they are scaled by the score of their headline and then summed
+    :param scores: headline scores
+    :param word_deviations: word scores
+    :param mode: calculating or scaling
+    :return:
+    """
+    c_word_deviations = Counter()
+    word_deviations = [word_dict for word_dict, score in zip(word_deviations, scores) if score > 0.5]
 
     for i, headline_counter in enumerate(word_deviations):
         sorted_headline = Counter(headline_counter).most_common(3)

@@ -13,10 +13,10 @@ $ streamlit run badpun.py --server.port 8052 -- low
 ```
 
 ### Structure
-The directory `pages/` holds the streamlit subpages in the order in which they are shown in the interface. 
-`Start.py` is the starting point of the whole app. 
+The folder `src/` contains all files code files required for the Application. `experiments/` contains jupyter notebooks that
+were used to determine parameters and conduct experiments. In the folder `data/` lies both example data for training of the model
+and for running the application.
 
-## Clustering
 ### Environment
 The file 'config.ini' contains all constants used throughout the system. In order to avoid spread of information, best
 add new constants to this file, as well as parameterization of methods etc. Usage:
@@ -27,8 +27,3 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 config['DATA']['TestUserEmbeddingPath']
 ```
-
-### Usage
-The information flow of the system is demonstrated in `src/clustering/demo.ipynb`.
-Each clustering algorithm inherits from the class ClusteringAlg, which predetermines the information flow. When adding
-a new clustering algorithm, add a new wrapper class similar to the existing ones. 
