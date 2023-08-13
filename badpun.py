@@ -61,19 +61,11 @@ def fit_reducer():
 @st.cache_resource
 def get_model():
     """
-    Creates and caches the model. If 'high' dimensionality is chosen, the embeddings from the recommender model
-    are directly used and clustered via KMeans, if 'low' is chosen, the reduced embeddings are used, and
-    Aggloromative clustering performed
+    Creates and caches the model.
     :return:
     """
-    if config['Dimensionality'] == 'low':
-        embeddings = user_embedding
-        model = AgglomorativeWrapper(config, embeddings)
-    elif config['Dimensionality'] == 'high':
-        embeddings = click_predictor.get_historic_user_embeddings()
-        model = KMeansWrapper(embeddings)
-    else:
-        raise ValueError("Not a valid input for config['Clustering']['Dimensionality']")
+    embeddings = user_embedding
+    model = KMeansWrapper(embeddings)
     return model
 
 
@@ -95,14 +87,7 @@ set_session_state(user_embedding[112])
 headlines = load_headlines()
 unread_headlines_ind, unread_headlines = extract_unread(headlines)
 
-# dependign on dimensionality, different inputs are passed to the model
-if config['Dimensionality'] == 'low':
-    prediction = model.predict(st.session_state.user)
-elif config['Dimensionality'] == 'high':
-    prediction = model.predict(user=click_predictor.get_personal_user_embedding())
-else:
-    raise ValueError("Not a valid input for config]")
-
+prediction = model.predict(st.session_state.user)
 # exemplars are the low dimensional medoids of the clusters
 exemplars = user_embedding[model.repr_indeces]
 
@@ -214,7 +199,7 @@ with alternative_tab:
                       f"But there're also some clusters about sports, politics, celebrities, and food, as well as nicely "
                       f"mixed ones.")
     left_column.write(
-        f" **We recommend to check out clusters 2, 13, 15, 19, 34, and 39 to see some very clear cluster profiles**.")
+        f" **We recommend to check out clusters 3, 5, 6, 8, 9, 13, and 14 to see some very clear cluster profiles**.")
     number = right_column.number_input('Cluster', min_value=0, max_value=int(config['NoClusters']) - 1,
                                        value=prediction)
 
