@@ -13,8 +13,9 @@ $ streamlit run badpun.py --server.port 8052 -- low
 ```
 
 ### Structure
-The folder `src/` contains all files required for the Application. `experiments/` contains jupyter notebooks that
-were used to determine parameters and conduct experiments.
+The folder `src/` contains all files code files required for the Application. `experiments/` contains jupyter notebooks that
+were used to determine parameters and conduct experiments. In the folder `data/` lies both example data for training of the model
+and for running the application.
 
 ### Environment
 The file 'config.ini' contains all constants used throughout the system. In order to avoid spread of information, best

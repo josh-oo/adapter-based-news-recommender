@@ -85,7 +85,7 @@ class KMeansWrapper:
                              hoverinfo="name",
                              mode='markers', name=label)
             )
-        fig.update_layout(height=800)
+        fig.update_layout(height=600)
         self.figure = fig
 
     def get_exemplar_of_cluster(self, id):
