@@ -28,5 +28,6 @@ config.read('config.ini')
 config['DATA']['TestUserEmbeddingPath']
 ```
 
-### Branches
-On the main branch, the wordclouds are computed using the simple attentions due to time constraints.  For the LRP implementation please switch to the high-dim-and-lrp branch.
+### Branche`
+On the `main` branch, the wordclouds are computed using the simple attentions due to time constraints.  For the LRP implementation please switch to the `high-dim-and-lrp` branch.
+`
